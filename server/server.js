@@ -24,18 +24,34 @@ app.get('/', (req, res) => {
 });
 // Auth routes
 app.use('/api/auth', require('./routes/authRoutes'));
+// Ticket routes  
+app.use('/api/tickets', require('./routes/ticketRoutes'));
+
+// ─── ERROR HANDLER ───────────────────────────────────────────
 
 app.use(errorHandler);
+
+// ─── START SERVER ────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
 
 async function start() {
   try {
     await connectDB();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(
         `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`
       );
+    });
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(
+          `Port ${PORT} is already in use. Stop the other process or change PORT in server/.env.`
+        );
+      } else {
+        console.error(`Server startup error: ${err.message}`);
+      }
+      process.exit(1);
     });
   } catch {
     process.exit(1);
