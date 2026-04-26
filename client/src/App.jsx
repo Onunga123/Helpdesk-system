@@ -1,26 +1,29 @@
-import { useEffect, useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext.jsx';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const Login = () => <h1 style={{ padding: 40 }}>Login Page — Coming Soon</h1>;
+const Dashboard = () => <h1 style={{ padding: 40 }}>Dashboard — Coming Soon</h1>;
+
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
+  return user ? children : <Navigate to="/login" replace />;
+};
 
 export default function App() {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetch(`${API}/`)
-      .then((r) => r.json())
-      .then(setData)
-      .catch((e) => setError(e.message));
-  }, []);
-
   return (
-    <main className="wrap">
-      <h1>TUC ICT Help Desk</h1>
-      <p className="muted">Client is running. Backend should be on port 5000.</p>
-      {error && <p className="err">Could not reach API: {error}</p>}
-      {data && (
-        <pre className="box">{JSON.stringify(data, null, 2)}</pre>
-      )}
-    </main>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
