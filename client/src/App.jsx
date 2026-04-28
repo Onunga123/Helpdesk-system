@@ -1,29 +1,21 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext.jsx';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
 
-const Login = () => <h1 style={{ padding: 40 }}>Login Page — Coming Soon</h1>;
-const Dashboard = () => <h1 style={{ padding: 40 }}>Dashboard — Coming Soon</h1>;
-
-const PrivateRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
-  return user ? children : <Navigate to="/login" replace />;
+const Dashboard = () => {
+  return <div className="wrap">You are logged in. Dashboard coming soon.</div>;
 };
 
-export default function App() {
+function App() {
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route
-        path="/dashboard"
-        element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        }
-      />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
+
+export default App;
