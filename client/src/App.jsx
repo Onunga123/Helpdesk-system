@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import DashboardLayout from "./components/layout/DashboardLayout";
-import StudentDashboard from "./pages/dashboard/StudentDashboard";
+import StudentDashboardFixed from "./pages/dashboard/StudentDashboardFixed";
 import ICTDashboard from "./pages/dashboard/ICTDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import TicketList from "./pages/tickets/TicketList";
@@ -33,7 +33,7 @@ const DashboardRouter = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === "admin") return <AdminDashboard />;
   if (user.role === "ict_officer") return <ICTDashboard />;
-  return <StudentDashboard />;
+  return <StudentDashboardFixed />;
 };
 
 function App() {

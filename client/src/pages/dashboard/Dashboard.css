@@ -151,8 +151,9 @@ tbody td {
 }
 
 .badge-closed {
-  background: rgba(139, 92, 246, 0.14);
-  color: #5b21b6;
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
 .badge-low {
@@ -171,8 +172,9 @@ tbody td {
 }
 
 .badge-critical {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #7f1d1d;
+  color: #ffffff;
+  border-color: #7f1d1d;
 }
 
 .btn {
@@ -714,7 +716,8 @@ tbody td {
 .badge-low { background: #eef2ff; color: #334155; border-color: #dbe4f0; }
 .badge-medium { background: #fff7e6; color: #8a4b00; border-color: #ffd89e; }
 .badge-high { background: #ffe9e9; color: #9f1d1d; border-color: #ffc4c4; }
-.badge-critical { background: #fee2e2; color: #8f1010; border-color: #f9b0b0; }
+.badge-closed { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
+.badge-critical { background: #7f1d1d; color: #ffffff; border-color: #7f1d1d; }
 
 /* ─── SPINNER ─────────────────────────────────────────────── */
 .spinner-container {
@@ -1038,6 +1041,274 @@ tbody td {
   background: #7f1d1d !important;
   color: #ffffff !important;
   border-color: #7f1d1d !important;
+}
+
+/* ─── Student/Staff dashboard additions ───────────────────────────── */
+
+.badge-info {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.ticket-tracker-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ticket-tracker-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.ticket-tracker-steps {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.ticket-tracker-steps::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18px;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #2563eb 0% var(--completed-pct, 0%),
+    #f59e0b var(--completed-pct, 0%) var(--current-pct, 25%),
+    #e5e7eb var(--current-pct, 25%) 100%
+  );
+  z-index: 0;
+}
+
+.ticket-tracker-step {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ticket-tracker-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: #e5e7eb;
+}
+
+.ticket-tracker-step.done .ticket-tracker-dot {
+  background: #2563eb;
+}
+
+.ticket-tracker-step.current .ticket-tracker-dot {
+  background: #f59e0b;
+  animation: trackerPulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.18);
+}
+
+.ticket-tracker-step.future .ticket-tracker-dot {
+  background: #e5e7eb;
+}
+
+.ticket-tracker-step-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticket-tracker-step.future .ticket-tracker-step-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.ticket-tracker-details {
+  padding-top: 2px;
+  display: grid;
+  gap: 6px;
+}
+
+.ticket-tracker-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ticket-tracker-title {
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.ticket-tracker-assigned {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.kb-article-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kb-article-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: grid;
+  gap: 8px;
+}
+
+.kb-article-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
+}
+
+.kb-article-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.kb-article-views {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.kb-article-title {
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.kb-article-preview {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  min-height: 2.6em;
+}
+
+.kb-article-actions {
+  margin-top: 2px;
+}
+
+.recent-updates-list {
+  display: grid;
+  gap: 10px;
+}
+
+.recent-update-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fafc;
+  transition: background 0.15s ease;
+}
+
+.recent-update-item:hover {
+  background: #eff6ff;
+}
+
+.recent-update-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.recent-update-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recent-update-title {
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 520px;
+}
+
+.recent-update-sub {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.recent-update-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.student-help-card {
+  background: #eff6ff;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.help-label {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.help-value {
+  font-weight: 800;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.help-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@keyframes trackerPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @media (max-width: 900px) {
