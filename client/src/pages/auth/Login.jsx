@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import {
+  FaUniversity,
+  FaTicketAlt,
+  FaShieldAlt,
+  FaChartLine,
+  FaEnvelope,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaTimesCircle,
+  FaArrowRight,
+  FaSpinner,
+} from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import { loginUser } from '../../redux/slices/authSlice';
 import './Auth.css';
 
@@ -10,6 +24,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const onChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -38,37 +53,131 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>TUC ICT Help Desk</h1>
-        <p>Sign in to continue</p>
-        <form className="auth-form" onSubmit={onSubmit}>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={onChange}
-            placeholder="Email"
-          />
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={onChange}
-            placeholder="Password"
-          />
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
-        {status.message ? (
-          <p className={status.type === 'error' ? 'auth-message error' : 'auth-message success'}>
-            {status.message}
+    <div className="auth-page">
+      <div className="auth-shell">
+        <aside className="auth-branding">
+          <div className="auth-branding-content">
+            <div className="auth-logo">
+              <FaUniversity />
+            </div>
+            <h2 className="auth-brand-title">Turkana University College</h2>
+            <p className="auth-brand-system">ICT Help Desk System</p>
+            <div className="auth-brand-divider" />
+            <ul className="auth-feature-list">
+              <li>
+                <FaTicketAlt />
+                <span>Submit and track ICT support requests</span>
+              </li>
+              <li>
+                <FaShieldAlt />
+                <span>Secure role-based access control</span>
+              </li>
+              <li>
+                <FaChartLine />
+                <span>Real-time analytics and reporting</span>
+              </li>
+            </ul>
+          </div>
+          <p className="auth-brand-footer">Powered by TUC ICT Department</p>
+        </aside>
+
+        <section className="auth-card auth-form-panel">
+          <div className="auth-card-accent" />
+          <p className="auth-welcome">Welcome Back</p>
+          <h1 className="auth-title">Sign in to your account</h1>
+          <p className="auth-subtitle">Enter your credentials to access the system</p>
+
+          {status.type === 'error' && status.message ? (
+            <div className="alert alert-error auth-alert">
+              <div className="auth-alert-left">
+                <FaTimesCircle />
+                <span>{status.message}</span>
+              </div>
+              <button
+                type="button"
+                className="auth-alert-close"
+                onClick={() => setStatus({ type: '', message: '' })}
+                aria-label="Dismiss error"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
+
+          <form className="auth-form" onSubmit={onSubmit}>
+            <div className="form-group">
+              <div className="input-icon-wrap">
+                <span className="input-icon">
+                  <FaEnvelope />
+                </span>
+                <input
+                  type="email"
+                  name="email"
+                  className="form-control"
+                  value={formData.email}
+                  onChange={onChange}
+                  placeholder="Email address"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <div className="input-icon-wrap">
+                <span className="input-icon">
+                  <FaLock />
+                </span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  className="form-control"
+                  value={formData.password}
+                  onChange={onChange}
+                  placeholder="Password"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="input-icon-right auth-toggle-btn"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="auth-forgot-link"
+              onClick={() => toast('Contact your administrator to reset your password')}
+            >
+              Forgot Password?
+            </button>
+
+            <button type="submit" className="btn btn-primary btn-block btn-lg auth-submit-btn" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <FaSpinner className="spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <FaArrowRight />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="divider auth-divider">
+            <span>or</span>
+          </div>
+
+          <p className="auth-footer auth-footer-centered">
+            Don&apos;t have an account? <Link to="/register">Register here</Link>
           </p>
-        ) : null}
-        <p className="auth-footer">
-          No account? <Link to="/register">Create one</Link>
-        </p>
+        </section>
       </div>
     </div>
   );
