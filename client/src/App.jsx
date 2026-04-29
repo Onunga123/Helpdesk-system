@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Login from "./pages/auth/Login";
@@ -43,6 +43,7 @@ function App() {
           <Route path="dashboard" element={<DashboardRouter />} />
           <Route path="tickets" element={<TicketList />} />
           <Route path="tickets/create" element={<CreateTicket />} />
+          <Route path="tickets/new" element={<CreateTicket />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="knowledge" element={<KnowledgeBase />} />
           <Route path="knowledge/:id" element={<ArticleDetail />} />
