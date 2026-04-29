@@ -296,6 +296,109 @@
   text-decoration: none;
 }
 
+.auth-shell-register {
+  width: min(960px, 100%);
+  grid-template-columns: 40% 60%;
+}
+
+.auth-form-panel-register {
+  padding: 30px 34px 26px;
+}
+
+.auth-brand-bottom {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+}
+
+.auth-brand-login-link {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.auth-brand-login-link a {
+  color: #93c5fd;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-section-divider {
+  position: relative;
+  margin: 8px 0 2px;
+  border-top: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.auth-section-divider span {
+  position: relative;
+  top: -10px;
+  background: #ffffff;
+  padding: 0 10px 0 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-field-hint {
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.auth-password-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.auth-strength {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.auth-strength-bars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  flex: 1;
+}
+
+.auth-strength-segment {
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.auth-strength-segment.on.weak { background: #ef4444; }
+.auth-strength-segment.on.fair { background: #f97316; }
+.auth-strength-segment.on.good { background: #eab308; }
+.auth-strength-segment.on.strong { background: #16a34a; }
+
+.auth-strength-label {
+  font-size: 0.76rem;
+  color: #475569;
+  font-weight: 700;
+  min-width: 44px;
+  text-align: right;
+}
+
+.auth-terms-note {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #64748b;
+  text-align: center;
+}
+
 .alert {
   border-radius: 10px;
   padding: 10px 12px;
@@ -306,6 +409,17 @@
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
+}
+
+.alert-success {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.auth-alert-success {
+  justify-content: center;
+  font-size: 0.86rem;
 }
 
 .auth-alert {
@@ -356,7 +470,7 @@
   .auth-shell {
     grid-template-columns: 1fr;
     min-height: auto;
-    max-width: 480px;
+    max-width: 520px;
   }
 
   .auth-branding {
@@ -369,5 +483,9 @@
 
   .auth-title {
     font-size: 1.5rem;
+  }
+
+  .auth-password-row {
+    grid-template-columns: 1fr;
   }
 }
