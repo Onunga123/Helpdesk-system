@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import API from '../../api/axios';
+import { useDispatch } from 'react-redux';
+import { loginUser } from '../../redux/slices/authSlice';
 import './Auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -24,23 +26,11 @@ const Login = () => {
 
     try {
       setIsLoading(true);
-      const response = await API.post('/auth/login', formData);
-      const user = response?.data?.data;
-
-      if (!user?.token) {
-        setStatus({ type: 'error', message: 'Login response is invalid. Try again.' });
-        return;
-      }
-
-      localStorage.setItem('user', JSON.stringify(user));
+      await dispatch(loginUser(formData)).unwrap();
       setStatus({ type: 'success', message: 'Login successful. Redirecting...' });
       navigate('/dashboard');
     } catch (error) {
-      const message =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        'Login failed. Please try again.';
+      const message = typeof error === 'string' ? error : error?.message || 'Login failed. Please try again.';
       setStatus({ type: 'error', message });
     } finally {
       setIsLoading(false);

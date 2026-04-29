@@ -1,61 +1,41 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const path = require('path');
-const connectDB = require('./config/db');
-const { errorHandler } = require('./middleware/errorMiddleware');
+﻿const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const path = require("path");
+const connectDB = require("./config/db");
+const { errorHandler } = require("./middleware/errorMiddleware");
 
-// Use .env as source of truth for local dev (Windows/shell may already set MONGO_URI).
-dotenv.config({ path: path.join(__dirname, '.env'), override: true });
+dotenv.config();
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.json({
-    message: 'TUC ICT Help Desk API is running...',
-    version: '1.0.0',
-    university: 'Turkana University College',
+    message: "TUC ICT Help Desk API is running...",
+    version: "1.0.0",
+    university: "Turkana University College",
   });
 });
-// Auth routes
-app.use('/api/auth', require('./routes/authRoutes'));
-// Ticket routes  
-app.use('/api/tickets', require('./routes/ticketRoutes'));
 
-// ─── ERROR HANDLER ───────────────────────────────────────────
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/tickets", require("./routes/ticketRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/knowledge", require("./routes/knowledgeBaseRoutes"));
+app.use("/api/assets", require("./routes/assetRoutes"));
+app.use("/api/reports", require("./routes/reportRoutes"));
+app.use("/api/upload", require("./routes/uploadRoutes"));
 
 app.use(errorHandler);
 
-// ─── START SERVER ────────────────────────────────────────────
-
 const PORT = process.env.PORT || 5000;
 
-async function start() {
-  try {
-    await connectDB();
-    const server = app.listen(PORT, () => {
-      console.log(
-        `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`
-      );
-    });
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(
-          `Port ${PORT} is already in use. Stop the other process or change PORT in server/.env.`
-        );
-      } else {
-        console.error(`Server startup error: ${err.message}`);
-      }
-      process.exit(1);
-    });
-  } catch {
-    process.exit(1);
-  }
-}
-
-start();
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log("Server running on port " + PORT);
+  });
+});

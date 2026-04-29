@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Base URL from .env or fallback to localhost
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
@@ -9,16 +8,11 @@ const API = axios.create({
 // Automatically attach JWT token to every request
 API.interceptors.request.use(
   (config) => {
-    // Get token from localStorage
     const user = localStorage.getItem('user');
     if (user) {
-      try {
-        const { token } = JSON.parse(user);
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      } catch {
-        localStorage.removeItem('user');
+      const { token } = JSON.parse(user);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
     }
     return config;
@@ -27,12 +21,12 @@ API.interceptors.request.use(
 );
 
 // ─── RESPONSE INTERCEPTOR ────────────────────────────────────
-// Handle token expiry globally — redirect to login if 401
+// Handle token expiry globally
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid — clear storage and redirect
+    const isAuthLoginRequest = (error.config?.url || "").includes("/auth/login");
+    if (error.response?.status === 401 && !isAuthLoginRequest) {
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
