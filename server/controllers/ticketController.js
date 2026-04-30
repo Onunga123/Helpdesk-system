@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
 const Ticket = require('../models/ticketModel');
 
 const createTicket = asyncHandler(async (req, res) => {
@@ -11,8 +12,8 @@ const createTicket = asyncHandler(async (req, res) => {
   const ticket = await Ticket.create({
     title,
     description,
-    category: category || 'general',
-    priority: priority || 'medium',
+    category: category || 'Other',
+    priority: priority || 'Medium',
     createdBy: req.user._id,
   });
 
@@ -20,9 +21,37 @@ const createTicket = asyncHandler(async (req, res) => {
 });
 
 const getTickets = asyncHandler(async (req, res) => {
-  const filter = req.user.role === 'student' ? { createdBy: req.user._id } : {};
-  const tickets = await Ticket.find(filter).sort({ createdAt: -1 });
-  res.json({ success: true, data: tickets });
+  const query = {};
+
+  if (req.user.role === 'student' || req.user.role === 'staff') {
+    query.createdBy = req.user._id;
+  }
+
+  if (req.user.role === 'ict_officer') {
+    const officerId = new mongoose.Types.ObjectId(req.user._id);
+    if (req.query.assignedTo === 'me') {
+      query.assignedTo = officerId;
+    } else {
+      query.$or = [{ assignedTo: officerId }, { assignedTo: null }];
+    }
+  }
+
+  if (req.query.status) query.status = req.query.status;
+  if (req.query.priority) query.priority = req.query.priority;
+  if (req.query.category) query.category = req.query.category;
+
+  const tickets = await Ticket.find(query)
+    .populate('createdBy', 'name email department role')
+    .populate('assignedTo', 'name email role')
+    .sort({ createdAt: -1 });
+
+  const normalizedTickets = tickets.map((ticket) => {
+    const row = ticket.toObject();
+    row.submittedBy = row.createdBy || null;
+    return row;
+  });
+
+  res.json({ success: true, data: normalizedTickets });
 });
 
 const getTicketById = asyncHandler(async (req, res) => {
@@ -78,10 +107,10 @@ const deleteTicket = asyncHandler(async (req, res) => {
 
 const getTicketStats = asyncHandler(async (_req, res) => {
   const [open, inProgress, resolved, closed, total] = await Promise.all([
-    Ticket.countDocuments({ status: 'open' }),
-    Ticket.countDocuments({ status: 'in_progress' }),
-    Ticket.countDocuments({ status: 'resolved' }),
-    Ticket.countDocuments({ status: 'closed' }),
+    Ticket.countDocuments({ status: 'Open' }),
+    Ticket.countDocuments({ status: 'In Progress' }),
+    Ticket.countDocuments({ status: 'Resolved' }),
+    Ticket.countDocuments({ status: 'Closed' }),
     Ticket.countDocuments({}),
   ]);
 
@@ -89,27 +118,6 @@ const getTicketStats = asyncHandler(async (_req, res) => {
     success: true,
     data: { total, open, inProgress, resolved, closed },
   });
-});
-
-const uploadAttachment = asyncHandler(async (req, res) => {
-  const ticket = await Ticket.findById(req.params.id);
-  if (!ticket) {
-    res.status(404);
-    throw new Error('Ticket not found');
-  }
-  if (!req.file) {
-    res.status(400);
-    throw new Error('No file uploaded');
-  }
-
-  ticket.attachments.push({
-    filename: req.file.filename,
-    path: `/uploads/${req.file.filename}`,
-    uploadedBy: req.user._id,
-  });
-
-  await ticket.save();
-  res.json({ success: true, data: ticket });
 });
 
 module.exports = {
@@ -120,5 +128,4 @@ module.exports = {
   addComment,
   deleteTicket,
   getTicketStats,
-  uploadAttachment,
 };

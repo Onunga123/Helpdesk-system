@@ -1,4 +1,4 @@
-﻿const asyncHandler = require("express-async-handler");
+const asyncHandler = require("express-async-handler");
 const Ticket = require("../models/ticketModel");
 const User = require("../models/userModel");
 const Asset = require("../models/assetModel");
@@ -51,16 +51,26 @@ const getUserReport = asyncHandler(async (req, res) => {
 });
 
 const getDashboardOverview = asyncHandler(async (req, res) => {
-  const [totalTickets, openTickets, inProgressTickets, resolvedTickets, totalUsers, totalAssets, recentTickets, criticalTickets] = await Promise.all([
+  const [totalTickets, openTickets, inProgressTickets, resolvedTickets, totalUsers, totalAssets, recentTicketsRaw, criticalTicketsRaw] = await Promise.all([
     Ticket.countDocuments(),
     Ticket.countDocuments({ status: "Open" }),
     Ticket.countDocuments({ status: "In Progress" }),
     Ticket.countDocuments({ status: "Resolved" }),
     User.countDocuments(),
     Asset.countDocuments(),
-    Ticket.find().sort({ createdAt: -1 }).limit(5).populate("submittedBy", "name department").populate("assignedTo", "name").select("ticketNumber title status priority category createdAt"),
-    Ticket.find({ priority: "Critical", status: { $ne: "Closed" } }).populate("submittedBy", "name department").select("ticketNumber title status department createdAt"),
+    Ticket.find().sort({ createdAt: -1 }).limit(5).populate("createdBy", "name department").populate("assignedTo", "name").select("ticketNumber title status priority category createdAt createdBy"),
+    Ticket.find({ priority: "Critical", status: { $ne: "Closed" } }).populate("createdBy", "name department").select("ticketNumber title status department createdAt createdBy"),
   ]);
+  const recentTickets = recentTicketsRaw.map((ticket) => {
+    const row = ticket.toObject();
+    row.submittedBy = row.createdBy || null;
+    return row;
+  });
+  const criticalTickets = criticalTicketsRaw.map((ticket) => {
+    const row = ticket.toObject();
+    row.submittedBy = row.createdBy || null;
+    return row;
+  });
   res.json({ success: true, data: { tickets: { total: totalTickets, open: openTickets, inProgress: inProgressTickets, resolved: resolvedTickets, closed: totalTickets - openTickets - inProgressTickets - resolvedTickets }, users: { total: totalUsers }, assets: { total: totalAssets }, recentTickets, criticalTickets } });
 });
 

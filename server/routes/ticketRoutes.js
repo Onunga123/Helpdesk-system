@@ -8,27 +8,27 @@ const {
   addComment,
   deleteTicket,
   getTicketStats,
-  uploadAttachment,
 } = require('../controllers/ticketController');
 const { protect, authorize } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
 
+// All ticket routes require login
 router.use(protect);
 
+// Stats route — must be BEFORE /:id route
+// otherwise Express reads 'stats' as a ticket ID
 router.get('/stats', authorize('admin', 'ict_officer'), getTicketStats);
 
-router
-  .route('/')
-  .get(getTickets)
-  .post(createTicket);
+// Main ticket routes
+router.route('/')
+  .get(getTickets)      // GET  /api/tickets
+  .post(createTicket);  // POST /api/tickets
 
-router
-  .route('/:id')
-  .get(getTicketById)
-  .put(authorize('admin', 'ict_officer'), updateTicket)
-  .delete(authorize('admin'), deleteTicket);
+router.route('/:id')
+  .get(getTicketById)                                     // GET    /api/tickets/:id
+  .put(authorize('admin', 'ict_officer'), updateTicket)   // PUT    /api/tickets/:id
+  .delete(authorize('admin'), deleteTicket);              // DELETE /api/tickets/:id
 
+// Comments
 router.post('/:id/comments', addComment);
-router.post('/:id/attachments', upload.single('file'), uploadAttachment);
 
 module.exports = router;
