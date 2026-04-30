@@ -3,16 +3,18 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import {
-  FaArrowRight,
-  FaCheckCircle,
-  FaClock,
-  FaExclamationTriangle,
-  FaListAlt,
-  FaPlus,
-  FaSyncAlt,
-  FaTicketAlt,
-  FaUserCheck,
-} from 'react-icons/fa';
+  FiArrowRight,
+  FiAlertTriangle,
+  FiBarChart2,
+  FiBookOpen,
+  FiCheckCircle,
+  FiClipboard,
+  FiInbox,
+  FiPlus,
+  FiRefreshCw,
+  FiSettings,
+  FiUserCheck,
+} from 'react-icons/fi';
 import API from '../../api/axios';
 import './Dashboard.css';
 
@@ -37,65 +39,10 @@ const formatDate = (value) => {
   return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
 };
 
-const timeAgo = (value) => {
-  if (!value) return '-';
-  const then = new Date(value).getTime();
-  if (Number.isNaN(then)) return '-';
-  const diffMs = Date.now() - then;
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-};
-
-const getPerformanceMetrics = (tickets, officerId) => {
-  const assigned = tickets.filter((t) => t?.assignedTo?._id === officerId);
-  const resolved = assigned.filter((t) => t.status === 'Resolved' || t.status === 'Closed');
-  const resolutionRate = assigned.length ? Math.round((resolved.length / assigned.length) * 100) : null;
-
-  const resolutionHours = resolved
-    .filter((t) => t.createdAt && t.resolvedAt)
-    .map((t) => (new Date(t.resolvedAt).getTime() - new Date(t.createdAt).getTime()) / (1000 * 60 * 60))
-    .filter((v) => Number.isFinite(v) && v >= 0);
-
-  const avgResolutionTime = resolutionHours.length
-    ? (resolutionHours.reduce((sum, value) => sum + value, 0) / resolutionHours.length).toFixed(1)
-    : null;
-
-  return {
-    totalAssigned: assigned.length,
-    totalResolved: resolved.length,
-    resolutionRate,
-    avgResolutionTime,
-  };
-};
-
 const getRecentActivity = (assignedTickets) => {
   return [...assignedTickets]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5)
-    .map((ticket) => {
-      const latestComment = [...(ticket.comments || [])].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )[0];
-
-      const latestCommentTime = latestComment?.createdAt ? new Date(latestComment.createdAt).getTime() : 0;
-      const updatedTime = ticket.updatedAt ? new Date(ticket.updatedAt).getTime() : 0;
-      const changed = latestComment && Math.abs(updatedTime - latestCommentTime) < 60000
-        ? 'New comment added'
-        : `Status changed to ${ticket.status}`;
-
-      return {
-        _id: ticket._id,
-        ticketNumber: ticket.ticketNumber,
-        title: ticket.title,
-        changed,
-        updatedAt: ticket.updatedAt,
-      };
-    });
+    .slice(0, 5);
 };
 
 const ICTDashboard = () => {
@@ -104,9 +51,6 @@ const ICTDashboard = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [assigningId, setAssigningId] = useState('');
-  const [statusUpdatingId, setStatusUpdatingId] = useState('');
-  const [statusSelections, setStatusSelections] = useState({});
 
   const fetchDashboardData = async () => {
     try {
@@ -115,13 +59,6 @@ const ICTDashboard = () => {
       const { data } = await API.get('/tickets');
       const ticketList = data?.data || [];
       setTickets(ticketList);
-      setStatusSelections((prev) => {
-        const next = { ...prev };
-        ticketList.forEach((ticket) => {
-          next[ticket._id] = next[ticket._id] || ticket.status;
-        });
-        return next;
-      });
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to load ICT officer dashboard.');
     } finally {
@@ -143,8 +80,8 @@ const ICTDashboard = () => {
     [tickets]
   );
 
-  const inProgressTickets = useMemo(
-    () => myAssignedTickets.filter((ticket) => ticket.status === 'In Progress'),
+  const pendingAssignedTickets = useMemo(
+    () => myAssignedTickets.filter((ticket) => ticket.status !== 'Resolved' && ticket.status !== 'Closed'),
     [myAssignedTickets]
   );
 
@@ -161,72 +98,41 @@ const ICTDashboard = () => {
     }).length;
   }, [myAssignedTickets]);
 
-  const performance = useMemo(() => getPerformanceMetrics(tickets, officerId), [tickets, officerId]);
   const recentActivity = useMemo(() => getRecentActivity(myAssignedTickets), [myAssignedTickets]);
+  const attentionCount = pendingAssignedTickets.length + unassignedTickets.length;
 
-  const assignToMe = async (ticketId) => {
-    try {
-      setAssigningId(ticketId);
-      await API.put(`/tickets/${ticketId}`, { assignedTo: officerId });
-      toast.success('Ticket assigned to you successfully');
-      await fetchDashboardData();
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to assign ticket.');
-    } finally {
-      setAssigningId('');
-    }
-  };
-
-  const updateQuickStatus = async (ticketId) => {
-    try {
-      setStatusUpdatingId(ticketId);
-      await API.put(`/tickets/${ticketId}`, { status: statusSelections[ticketId] });
-      toast.success('Ticket status updated');
-      await fetchDashboardData();
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to update ticket status.');
-    } finally {
-      setStatusUpdatingId('');
-    }
-  };
-
-  const renderTicketTable = (rows, emptyMessage, actionRenderer) => {
+  const renderTicketTable = (rows, emptyTitle, emptyDescription, showUpdatedDate = false) => {
     if (!rows.length) {
       return (
-        <div className="empty-state dashboard-empty-compact">
-          <FaTicketAlt />
-          <p>{emptyMessage}</p>
+        <div className="empty-state">
+          <FiInbox />
+          <h3>{emptyTitle}</h3>
+          <p>{emptyDescription}</p>
         </div>
       );
     }
 
     return (
-      <div className="table-wrapper">
-        <table className="data-table">
+      <div className="table-wrap">
+        <table>
           <thead>
             <tr>
-              <th>Ticket #</th>
+              <th>Ticket No</th>
               <th>Title</th>
-              <th>Submitted By</th>
               <th>Priority</th>
               <th>Status</th>
-              <th>Date Submitted</th>
-              <th>Actions</th>
+              <th>Submitted By</th>
+              <th>{showUpdatedDate ? 'Updated' : 'Date'}</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((ticket) => (
               <tr key={ticket._id}>
-                <td className="ticket-number dashboard-mono">{ticket.ticketNumber}</td>
-                <td className="ticket-title">{ticket.title}</td>
+                <td className="dashboard-mono">{ticket.ticketNumber}</td>
+                <td>{ticket.title}</td>
                 <td>
-                  <div className="dashboard-meta-stack">
-                    <span>{ticket?.submittedBy?.name || 'Unknown'}</span>
-                    <span className="dashboard-meta-muted">{ticket?.submittedBy?.department || '-'}</span>
-                  </div>
-                </td>
-                <td>
-                  <span className={`badge ${priorityBadgeClass[ticket.priority] || 'badge-medium'} ${ticket.priority === 'Critical' ? 'dashboard-badge-critical' : ''}`}>
+                  <span className={`badge ${priorityBadgeClass[ticket.priority] || 'badge-medium'}`}>
                     {ticket.priority}
                   </span>
                 </td>
@@ -235,8 +141,15 @@ const ICTDashboard = () => {
                     {ticket.status}
                   </span>
                 </td>
-                <td>{formatDate(ticket.createdAt)}</td>
-                <td>{actionRenderer(ticket)}</td>
+                <td>
+                  {ticket?.submittedBy?.name || '-'}
+                </td>
+                <td>{formatDate(showUpdatedDate ? ticket.updatedAt : ticket.createdAt)}</td>
+                <td>
+                  <Link to={`/tickets/${ticket._id}`} className="btn btn-sm btn-secondary">
+                    View
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -274,225 +187,181 @@ const ICTDashboard = () => {
   }
 
   return (
-    <section className="dashboard" aria-label="ICT officer dashboard">
+    <section aria-label="ICT officer dashboard">
       <header className="page-header">
         <div>
-          <h1 className="um-title">ICT Officer Dashboard</h1>
-          <p className="um-subtitle">Manage and resolve ICT support tickets efficiently</p>
-          <p className="dashboard-last-updated">Welcome back, <strong>{user?.name || 'Officer'}</strong></p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <h1 style={{ margin: 0, fontSize: '1.6rem', color: 'var(--text)' }}>ICT Officer Dashboard</h1>
+            <span className="badge badge-progress" style={{ fontSize: '0.74rem' }}>
+              ICT Officer
+            </span>
+          </div>
+          <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
+            Manage and resolve ICT support tickets efficiently
+          </p>
+          <p style={{ margin: '6px 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+            Last updated: {new Date().toLocaleString()}
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link to="/tickets/create" className="btn btn-primary">
-            <FaPlus /> New Ticket
+            <FiPlus /> New Ticket
           </Link>
           <button type="button" className="btn btn-secondary" onClick={fetchDashboardData}>
-            <FaSyncAlt /> Refresh
+            <FiRefreshCw /> Refresh
           </button>
         </div>
       </header>
 
-      {criticalTickets.length > 0 && (
-        <div className="alert-critical" role="alert">
-          <FaExclamationTriangle />
-          <div>
-            <strong>{criticalTickets.length} Critical Ticket(s) need attention</strong>
-            <p>These unresolved critical tickets should be prioritized immediately.</p>
-          </div>
-          <Link to="/tickets?priority=Critical" className="alert-link">
-            View Critical Tickets <FaArrowRight />
-          </Link>
-        </div>
-      )}
+      <div style={{ height: 1, background: 'var(--border)', marginBottom: 24 }} />
 
-      <div className="dashboard-metrics" role="list" aria-label="Officer stats">
-        <article className="metric-card" role="listitem">
-          <div className="metric-icon" style={{ color: '#2563eb', background: 'rgba(37,99,235,0.12)' }}>
-            <FaUserCheck />
+      <div
+        style={{
+          marginBottom: 24,
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: 10,
+          padding: '14px 20px',
+          color: '#1e3a8a',
+        }}
+      >
+        {attentionCount > 0
+          ? `👋 Welcome back, ${user?.name || 'Officer'}. You have ${attentionCount} tickets awaiting your attention.`
+          : `👋 Welcome back, ${user?.name || 'Officer'}. Your queue is clear. Great work!`}
+      </div>
+
+      <div className="stats-grid">
+        <article className="stat-card">
+          <div className="stat-icon" style={{ color: '#2563eb', background: '#eff6ff' }}>
+            <FiUserCheck />
           </div>
           <div>
-            <p className="metric-label">My Assigned Tickets</p>
-            <p className="metric-value">{myAssignedTickets.length}</p>
-            <p className="metric-note">Tickets assigned to you</p>
+            <p className="stat-value">{myAssignedTickets.length}</p>
+            <p className="stat-label">My Assigned Tickets</p>
           </div>
         </article>
-        <article className="metric-card" role="listitem">
-          <div className="metric-icon" style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.14)' }}>
-            <FaClock />
+
+        <article className="stat-card">
+          <div className="stat-icon" style={{ color: '#ea580c', background: '#fff7ed' }}>
+            <FiInbox />
           </div>
           <div>
-            <p className="metric-label">Open Tickets</p>
-            <p className="metric-value">{unassignedTickets.length}</p>
-            <p className="metric-note">Unassigned open tickets</p>
+            <p className="stat-value">{unassignedTickets.length}</p>
+            <p className="stat-label">Open Tickets</p>
           </div>
         </article>
-        <article className="metric-card" role="listitem">
-          <div className="metric-icon" style={{ color: '#16a34a', background: 'rgba(22,163,74,0.14)' }}>
-            <FaCheckCircle />
+
+        <article className="stat-card">
+          <div className="stat-icon" style={{ color: '#16a34a', background: '#f0fdf4' }}>
+            <FiCheckCircle />
           </div>
           <div>
-            <p className="metric-label">Resolved Today</p>
-            <p className="metric-value">{resolvedToday}</p>
-            <p className="metric-note">Resolved by you today</p>
+            <p className="stat-value">{resolvedToday}</p>
+            <p className="stat-label">Resolved Today</p>
           </div>
         </article>
-        <article className="metric-card" role="listitem">
-          <div className="metric-icon" style={{ color: '#b91c1c', background: 'rgba(185,28,28,0.14)' }}>
-            <FaExclamationTriangle />
+
+        <article className="stat-card">
+          <div className="stat-icon" style={{ color: '#dc2626', background: '#fef2f2' }}>
+            <FiAlertTriangle />
           </div>
           <div>
-            <p className="metric-label">Critical Tickets</p>
-            <p className="metric-value">{criticalTickets.length}</p>
-            <p className="metric-note">Unresolved critical requests</p>
+            <p className="stat-value">{criticalTickets.length}</p>
+            <p className="stat-label">Critical Tickets</p>
           </div>
         </article>
       </div>
 
-      <article className="dashboard-card">
-        <div className="card-header">
-          <h2 className="card-title">My Assigned Tickets</h2>
-          <Link to="/tickets" className="card-link">
-            View All <FaArrowRight />
-          </Link>
-        </div>
-        {renderTicketTable(
-          [...myAssignedTickets].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
-          'No tickets assigned to you yet',
-          (ticket) => (
-            <Link to={`/tickets/${ticket._id}`} className="table-action-btn">
-              Update
-            </Link>
-          )
-        )}
-      </article>
-
-      <article className="dashboard-card">
-        <div className="card-header">
-          <h2 className="card-title">Unassigned Tickets - Needs Attention</h2>
-          <span className="badge badge-progress">{unassignedTickets.length}</span>
-        </div>
-        {renderTicketTable(
-          [...unassignedTickets].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
-          'All tickets are currently assigned. Great work!',
-          (ticket) => (
-            <button
-              type="button"
-              className="table-action-btn"
-              onClick={() => assignToMe(ticket._id)}
-              disabled={assigningId === ticket._id}
-            >
-              {assigningId === ticket._id ? 'Assigning...' : 'Assign to Me'}
-            </button>
-          )
-        )}
-      </article>
-
-      <div className="dashboard-grid">
-        <article className="dashboard-card span-6">
+      <div className="stats-grid" style={{ gridTemplateColumns: '13fr 7fr', marginTop: 24 }}>
+        <article className="card">
           <div className="card-header">
-            <h2 className="card-title">Quick Status Update</h2>
+            <h2 className="card-title">My Assigned Tickets</h2>
+            <Link to="/tickets" className="card-link">
+              View All <FiArrowRight />
+            </Link>
           </div>
-          <div className="dashboard-section-stack">
-            {inProgressTickets.length ? (
-              inProgressTickets.map((ticket) => (
-                <div key={ticket._id} className="dashboard-inline-panel">
-                  <div className="dashboard-inline-main">
-                    <div className="dashboard-mono dashboard-inline-title">{ticket.ticketNumber}</div>
-                    <div className="dashboard-inline-subtitle">{ticket.title}</div>
-                    <span className={`badge ${statusBadgeClass[ticket.status] || 'badge-open'}`}>{ticket.status}</span>
-                  </div>
-                  <div className="dashboard-inline-actions">
-                    <select
-                      className="um-select"
-                      value={statusSelections[ticket._id] || ticket.status}
-                      onChange={(e) => setStatusSelections((prev) => ({ ...prev, [ticket._id]: e.target.value }))}
-                    >
-                      <option value="In Progress">In Progress</option>
-                      <option value="Resolved">Resolved</option>
-                    </select>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      onClick={() => updateQuickStatus(ticket._id)}
-                      disabled={statusUpdatingId === ticket._id}
-                    >
-                      {statusUpdatingId === ticket._id ? 'Updating...' : 'Update'}
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state dashboard-empty-compact">
-                <FaListAlt />
-                <p>No tickets currently in progress</p>
-              </div>
+          <div className="card-body">
+            {renderTicketTable(
+              [...myAssignedTickets].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
+              'No tickets assigned yet',
+              'Tickets assigned to you will appear here'
             )}
           </div>
         </article>
 
-        <article className="dashboard-card span-6">
+        <article className="card">
           <div className="card-header">
-            <h2 className="card-title">My Performance</h2>
+            <h2 className="card-title">Quick Actions</h2>
           </div>
-          <div className="dashboard-performance-grid">
-            <div className="dashboard-performance-item">
-              <FaTicketAlt className="snapshot-icon info" />
-              <div>
-                <div className="dashboard-performance-value">{performance.totalAssigned}</div>
-                <div className="dashboard-performance-label">Total Assigned</div>
-              </div>
-            </div>
-            <div className="dashboard-performance-item">
-              <FaCheckCircle className="snapshot-icon success" />
-              <div>
-                <div className="dashboard-performance-value">{performance.totalResolved}</div>
-                <div className="dashboard-performance-label">Total Resolved</div>
-              </div>
-            </div>
-            <div className="dashboard-performance-item">
-              <FaChartBar className="snapshot-icon warning" />
-              <div>
-                <div className="dashboard-performance-value">
-                  {performance.resolutionRate === null ? 'N/A' : `${performance.resolutionRate}%`}
-                </div>
-                <div className="dashboard-performance-label">Resolution Rate</div>
-              </div>
-            </div>
-            <div className="dashboard-performance-item">
-              <FaClock className="snapshot-icon purple" />
-              <div>
-                <div className="dashboard-performance-value">
-                  {performance.avgResolutionTime === null ? 'N/A' : `${performance.avgResolutionTime}h`}
-                </div>
-                <div className="dashboard-performance-label">Avg Resolution Time</div>
-              </div>
-            </div>
+          <div className="card-body" style={{ display: 'grid', gap: 12 }}>
+            <Link className="btn" to="/tickets" style={{ justifyContent: 'space-between', padding: '12px 14px' }}>
+              <span style={{ display: 'grid', gap: 2 }}>
+                <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center', color: '#2563eb', fontWeight: 700 }}>
+                  <FiClipboard /> View All Tickets
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 500 }}>
+                  Browse open and assigned tickets
+                </span>
+              </span>
+              <FiArrowRight />
+            </Link>
+            <Link className="btn" to="/reports" style={{ justifyContent: 'space-between', padding: '12px 14px' }}>
+              <span style={{ display: 'grid', gap: 2 }}>
+                <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center', color: '#0f766e', fontWeight: 700 }}>
+                  <FiBarChart2 /> Open Reports
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 500 }}>
+                  View performance and ticket analytics
+                </span>
+              </span>
+              <FiArrowRight />
+            </Link>
+            <Link className="btn" to="/knowledge" style={{ justifyContent: 'space-between', padding: '12px 14px' }}>
+              <span style={{ display: 'grid', gap: 2 }}>
+                <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center', color: '#7c3aed', fontWeight: 700 }}>
+                  <FiBookOpen /> Knowledge Base
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 500 }}>
+                  Browse and manage ICT articles
+                </span>
+              </span>
+              <FiArrowRight />
+            </Link>
+            <button
+              type="button"
+              className="btn"
+              style={{ justifyContent: 'space-between', padding: '12px 14px' }}
+              onClick={() => toast('Profile settings screen is coming soon')}
+            >
+              <span style={{ display: 'grid', gap: 2 }}>
+                <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center', color: '#475569', fontWeight: 700 }}>
+                  <FiSettings /> Update Profile
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 500 }}>
+                  Manage your account settings
+                </span>
+              </span>
+              <FiArrowRight />
+            </button>
           </div>
         </article>
       </div>
 
-      <article className="dashboard-card">
+      <article className="card" style={{ marginTop: 24 }}>
         <div className="card-header">
-          <h2 className="card-title">Recent Activity</h2>
+          <div>
+            <h2 className="card-title">Recent Activity</h2>
+            <p style={{ marginTop: 4, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+              Your latest ticket interactions
+            </p>
+          </div>
         </div>
-        <div className="dashboard-activity-list">
-          {recentActivity.length ? (
-            recentActivity.map((item) => (
-              <Link key={item._id} to={`/tickets/${item._id}`} className="dashboard-activity-item">
-                <div>
-                  <div className="dashboard-inline-title">{item.ticketNumber} - {item.title}</div>
-                  <div className="dashboard-inline-subtitle">{item.changed}</div>
-                </div>
-                <div className="dashboard-activity-meta">
-                  <span>{timeAgo(item.updatedAt)}</span>
-                  <FaArrowRight />
-                </div>
-              </Link>
-            ))
-          ) : (
-            <div className="empty-state dashboard-empty-compact">
-              <FaClock />
-              <p>No recent activity yet</p>
-            </div>
+        <div className="card-body">
+          {renderTicketTable(
+            recentActivity,
+            'No recent activity yet',
+            'Ticket updates assigned to you will appear here',
+            true
           )}
         </div>
       </article>
