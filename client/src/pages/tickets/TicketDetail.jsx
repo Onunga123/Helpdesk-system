@@ -22,6 +22,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 import API from '../../api/axios';
+import API_URL from '../../config/api';
 
 const statusBadgeClass = (status) => {
   if (status === 'Open') return 'badge-open';
@@ -276,7 +277,7 @@ const TicketDetail = () => {
     }
   };
 
-  const attachmentDownloadBase = useMemo(() => 'http://localhost:5000', []);
+  const attachmentDownloadBase = useMemo(() => API_URL, []);
 
   const onDeleteAttachment = async (attachmentId) => {
     if (!attachmentId) return;

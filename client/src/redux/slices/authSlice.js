@@ -1,7 +1,8 @@
-﻿import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import API_URL from "../../config/api";
 
-const API_URL = "http://localhost:5000/api/auth";
+const AUTH_API_URL = `${API_URL}/api/auth`;
 
 const userFromStorage = localStorage.getItem("user")
   ? JSON.parse(localStorage.getItem("user"))
@@ -9,7 +10,7 @@ const userFromStorage = localStorage.getItem("user")
 
 export const loginUser = createAsyncThunk("auth/login", async ({ email, password }, thunkAPI) => {
   try {
-    const { data } = await axios.post(API_URL + "/login", { email, password });
+    const { data } = await axios.post(AUTH_API_URL + "/login", { email, password });
     localStorage.setItem("token", data.data.token);
     localStorage.setItem("user", JSON.stringify(data.data));
     return data.data;
@@ -20,7 +21,7 @@ export const loginUser = createAsyncThunk("auth/login", async ({ email, password
 
 export const registerUser = createAsyncThunk("auth/register", async (userData, thunkAPI) => {
   try {
-    const { data } = await axios.post(API_URL + "/register", userData);
+    const { data } = await axios.post(AUTH_API_URL + "/register", userData);
     localStorage.setItem("token", data.data.token);
     localStorage.setItem("user", JSON.stringify(data.data));
     return data.data;

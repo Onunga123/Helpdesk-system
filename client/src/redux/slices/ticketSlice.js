@@ -1,14 +1,15 @@
-﻿import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import API_URL from "../../config/api";
 
-const API_URL = "http://localhost:5000/api/tickets";
+const TICKETS_API_URL = `${API_URL}/api/tickets`;
 
 const getToken = () => localStorage.getItem("token");
 
 export const getTickets = createAsyncThunk("tickets/getAll", async (filters = {}, thunkAPI) => {
   try {
     const params = new URLSearchParams(filters).toString();
-    const { data } = await axios.get(API_URL + "?" + params, { headers: { Authorization: "Bearer " + getToken() } });
+    const { data } = await axios.get(TICKETS_API_URL + "?" + params, { headers: { Authorization: "Bearer " + getToken() } });
     return data.data;
   } catch (error) {
     return thunkAPI.rejectWithValue(error.response?.data?.message || "Failed to fetch tickets");
@@ -17,7 +18,7 @@ export const getTickets = createAsyncThunk("tickets/getAll", async (filters = {}
 
 export const createTicket = createAsyncThunk("tickets/create", async (ticketData, thunkAPI) => {
   try {
-    const { data } = await axios.post(API_URL, ticketData, { headers: { Authorization: "Bearer " + getToken() } });
+    const { data } = await axios.post(TICKETS_API_URL, ticketData, { headers: { Authorization: "Bearer " + getToken() } });
     return data.data;
   } catch (error) {
     return thunkAPI.rejectWithValue(error.response?.data?.message || "Failed to create ticket");
@@ -26,7 +27,7 @@ export const createTicket = createAsyncThunk("tickets/create", async (ticketData
 
 export const updateTicket = createAsyncThunk("tickets/update", async ({ id, updates }, thunkAPI) => {
   try {
-    const { data } = await axios.put(API_URL + "/" + id, updates, { headers: { Authorization: "Bearer " + getToken() } });
+    const { data } = await axios.put(TICKETS_API_URL + "/" + id, updates, { headers: { Authorization: "Bearer " + getToken() } });
     return data.data;
   } catch (error) {
     return thunkAPI.rejectWithValue(error.response?.data?.message || "Failed to update ticket");
@@ -35,7 +36,7 @@ export const updateTicket = createAsyncThunk("tickets/update", async ({ id, upda
 
 export const addComment = createAsyncThunk("tickets/addComment", async ({ id, comment }, thunkAPI) => {
   try {
-    const { data } = await axios.post(API_URL + "/" + id + "/comments", { comment }, { headers: { Authorization: "Bearer " + getToken() } });
+    const { data } = await axios.post(TICKETS_API_URL + "/" + id + "/comments", { comment }, { headers: { Authorization: "Bearer " + getToken() } });
     return data.data;
   } catch (error) {
     return thunkAPI.rejectWithValue(error.response?.data?.message || "Failed to add comment");
