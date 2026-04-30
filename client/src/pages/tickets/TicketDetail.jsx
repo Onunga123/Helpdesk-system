@@ -61,6 +61,19 @@ const getFileIcon = (fileName = '') => {
   return 'other';
 };
 
+const normalizePriority = (value) => {
+  const clean = String(value || '').trim().toLowerCase();
+  if (clean === 'low') return 'Low';
+  if (clean === 'medium') return 'Medium';
+  if (clean === 'high') return 'High';
+  if (clean === 'critical') return 'Critical';
+  return 'Medium';
+};
+
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'];
+const MAX_FILES_PER_UPLOAD = 5;
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
 const TicketDetail = () => {
   const user = useSelector((state) => state.auth.user);
   const role = user?.role;
@@ -90,6 +103,7 @@ const TicketDetail = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const uploadInputRef = useRef(null);
   const [uploadError, setUploadError] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   const canManageAssignment = isPrivileged; // server authorizes on PUT route too
   const canUpdateStatus = isPrivileged;
@@ -178,7 +192,7 @@ const TicketDetail = () => {
     try {
       const payload = {
         status: statusForm.status,
-        priority: statusForm.priority,
+        priority: normalizePriority(statusForm.priority),
       };
       const shouldHaveNote = statusForm.status === 'Resolved' || statusForm.status === 'Closed';
       if (shouldHaveNote && statusForm.resolutionNote.trim()) payload.resolutionNote = statusForm.resolutionNote.trim();
@@ -213,25 +227,47 @@ const TicketDetail = () => {
     }
   };
 
-  const onUploadAttachments = async (e) => {
+  const onPickAttachments = (e) => {
     const picked = Array.from(e.target.files || []);
     if (!picked.length) return;
-    if (picked.length > 5) {
+    if (picked.length > MAX_FILES_PER_UPLOAD) {
       setUploadError('You can upload up to 5 files at a time.');
+      setSelectedFiles([]);
+      return;
+    }
+    const invalid = picked.filter((f) => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const isValidExt = ALLOWED_EXTENSIONS.includes(ext);
+      const isValidSize = f.size <= MAX_FILE_SIZE_BYTES;
+      return !isValidExt || !isValidSize;
+    });
+    if (invalid.length) {
+      setUploadError('Only jpg, jpeg, png, gif, pdf, doc, docx, xls, xlsx, txt files are allowed (max 5MB each).');
+      setSelectedFiles([]);
       return;
     }
     setUploadError('');
+    setSelectedFiles(picked);
+  };
+
+  const onUploadAttachments = async () => {
+    if (!selectedFiles.length) {
+      setUploadError('Please select at least one file before uploading.');
+      return;
+    }
     setUploadLoading(true);
 
     try {
       const formData = new FormData();
-      picked.forEach((f) => formData.append('attachments', f));
+      selectedFiles.forEach((f) => formData.append('attachments', f));
       await API.post(`/upload/ticket/${ticketId}`, formData);
-      toast.success('Files uploaded');
+      toast.success('Files uploaded successfully');
+      setSelectedFiles([]);
       await fetchTicket();
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to upload files.');
-      setUploadError(err?.response?.data?.message || '');
+      const backendMessage = err?.response?.data?.message || 'Failed to upload files.';
+      toast.error(backendMessage);
+      setUploadError(backendMessage);
     } finally {
       setUploadLoading(false);
       if (uploadInputRef.current) uploadInputRef.current.value = '';
@@ -413,9 +449,9 @@ const TicketDetail = () => {
                     ref={uploadInputRef}
                     type="file"
                     multiple
-                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                    accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                     style={{ display: 'none' }}
-                    onChange={onUploadAttachments}
+                    onChange={onPickAttachments}
                   />
                   <button
                     type="button"
@@ -423,10 +459,30 @@ const TicketDetail = () => {
                     onClick={() => uploadInputRef.current?.click()}
                     disabled={uploadLoading}
                   >
-                    <FiUpload /> {uploadLoading ? 'Uploading...' : 'Upload More Files'}
+                    <FiUpload /> Choose Files
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={onUploadAttachments}
+                    disabled={uploadLoading || !selectedFiles.length}
+                  >
+                    <FiUpload /> {uploadLoading ? 'Uploading...' : 'Upload Selected'}
+                  </button>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+                    {selectedFiles.length ? `${selectedFiles.length} file(s) selected` : 'No files selected'}
+                  </span>
                   {uploadError ? <p className="um-form-error">{uploadError}</p> : null}
                 </div>
+              )}
+              {selectedFiles.length > 0 && (
+                <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                  {selectedFiles.map((f) => (
+                    <li key={`${f.name}-${f.size}`} style={{ color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+                      {f.name}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>

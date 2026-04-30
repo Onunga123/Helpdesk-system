@@ -20,7 +20,16 @@ const CATEGORY_OPTIONS = [
 const priorityOptions = ['Low', 'Medium', 'High', 'Critical'];
 
 const fileAccept =
-  'image/*,.pdf,.doc,.docx,.xls,.xlsx';
+  '.jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+
+const normalizePriority = (value) => {
+  const clean = String(value || '').trim().toLowerCase();
+  if (clean === 'low') return 'Low';
+  if (clean === 'medium') return 'Medium';
+  if (clean === 'high') return 'High';
+  if (clean === 'critical') return 'Critical';
+  return 'Medium';
+};
 
 const CreateTicket = () => {
   const user = useSelector((state) => state.auth.user);
@@ -54,14 +63,15 @@ const CreateTicket = () => {
 
   const onPickFiles = (e) => {
     const picked = normalizeFiles(e.target.files);
+    const allowedExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif', 'txt'];
     const invalid = picked.filter((f) => {
       const ext = (f.name.split('.').pop() || '').toLowerCase();
-      const allowedExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif'];
-      if (f.type.startsWith('image/')) return true;
-      return allowedExts.includes(ext);
+      const isTooLarge = f.size > 5 * 1024 * 1024;
+      if (isTooLarge) return true;
+      return !allowedExts.includes(ext);
     });
     if (invalid.length) {
-      toast.error('Some selected files are not allowed. Please upload images, PDF, Word or Excel files.');
+      toast.error('Some files are invalid. Use jpg, jpeg, png, gif, pdf, doc, docx, xls, xlsx, txt and max 5MB each.');
       setFiles(picked.filter((f) => !invalid.includes(f)));
       return;
     }
@@ -87,7 +97,7 @@ const CreateTicket = () => {
         title: title.trim(),
         description: description.trim(),
         category,
-        priority,
+        priority: normalizePriority(priority),
         department: department || user?.department || '',
       };
 

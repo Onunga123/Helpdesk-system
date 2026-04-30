@@ -58,6 +58,15 @@ const priorityToBadge = (priority) => {
   return 'badge-medium';
 };
 
+const normalizePriority = (value) => {
+  const clean = String(value || '').trim().toLowerCase();
+  if (clean === 'low') return 'Low';
+  if (clean === 'medium') return 'Medium';
+  if (clean === 'high') return 'High';
+  if (clean === 'critical') return 'Critical';
+  return 'Medium';
+};
+
 const StudentDashboardFixed = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
@@ -189,7 +198,7 @@ const StudentDashboardFixed = () => {
       const payload = {
         title: form.title.trim(),
         category: form.category,
-        priority: form.priority,
+        priority: normalizePriority(form.priority),
         description: form.description.trim(),
         department: displayDept,
       };
@@ -400,10 +409,10 @@ const StudentDashboardFixed = () => {
               <div>
                 <label style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.9rem' }}>Priority</label>
                 <select className="um-select" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}>
-                  <option>Low</option>
-                  <option>Medium</option>
-                  <option>High</option>
-                  <option>Critical</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
                 </select>
               </div>
               <div style={{ gridColumn: 'span 1' }}>
