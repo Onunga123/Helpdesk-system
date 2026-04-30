@@ -12,7 +12,7 @@ import {
   FaTicketAlt,
   FaUsers,
 } from 'react-icons/fa';
-import API from '../../utils/api';
+import API from '../../api/axios';
 import './Dashboard.css';
 
 const statusBadge = {

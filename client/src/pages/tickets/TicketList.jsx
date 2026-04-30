@@ -300,8 +300,8 @@ const TicketList = () => {
                         <td>
                           {t?.submittedBy?.name ? (
                             <>
-                              <div style={{ fontWeight: 700 }}>{t.submittedBy.name}</div>
-                              <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t.submittedBy.department || ''}</div>
+                              <div style={{ fontWeight: 700 }}>{t?.submittedBy?.name}</div>
+                              <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t?.submittedBy?.department || ''}</div>
                             </>
                           ) : (
                             '-'

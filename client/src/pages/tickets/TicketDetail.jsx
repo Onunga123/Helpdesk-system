@@ -110,8 +110,10 @@ const TicketDetail = () => {
   const ticketIsClosed = ticket?.status === 'Closed';
 
   const isTicketOwner = useMemo(() => {
-    if (!ticket?.submittedBy?._id) return false;
-    return ticket.submittedBy._id.toString() === (user?._id || '').toString();
+    const submittedById = ticket?.submittedBy?._id?.toString?.() || ticket?.submittedBy?.toString?.();
+    const currentUserId = user?._id?.toString?.();
+    if (!submittedById || !currentUserId) return false;
+    return submittedById === currentUserId;
   }, [ticket, user]);
 
   const canUpload = !ticketIsClosed;
@@ -387,13 +389,13 @@ const TicketDetail = () => {
             <div className="card-header">
               <h2 className="card-title">Attachments</h2>
               <span className="badge" style={{ fontSize: '0.78rem' }}>
-                {ticket.attachments?.length || 0} file(s)
+                {(ticket?.attachments || []).length} file(s)
               </span>
             </div>
             <div className="card-body">
-              {ticket.attachments?.length ? (
+              {(ticket?.attachments || []).length ? (
                 <div style={{ display: 'grid', gap: 10 }}>
-                  {ticket.attachments.map((att) => {
+                  {(ticket?.attachments || []).map((att) => {
                     const iconKind = getFileIcon(att.fileName || '');
                     const icon =
                       iconKind === 'image' ? <FiImage /> :
