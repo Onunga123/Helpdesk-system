@@ -1,16 +1,16 @@
-﻿const express = require("express");
+const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 router.use(protect);
-router.use(authorize("admin"));
-
-router.get("/stats", userController.getUserStats);
-router.get("/", userController.getUsers);
-router.post("/", userController.createUser);
-router.get("/:id", userController.getUserById);
-router.put("/:id", userController.updateUser);
-router.delete("/:id", userController.deleteUser);
+// Allow ict_officer to view the users list (needed for ticket assignment dropdown),
+// but keep create/update/delete restricted to admins.
+router.get("/stats", authorize("admin"), userController.getUserStats);
+router.get("/", authorize("admin", "ict_officer"), userController.getUsers);
+router.post("/", authorize("admin"), userController.createUser);
+router.get("/:id", authorize("admin"), userController.getUserById);
+router.put("/:id", authorize("admin"), userController.updateUser);
+router.delete("/:id", authorize("admin"), userController.deleteUser);
 
 module.exports = router;
