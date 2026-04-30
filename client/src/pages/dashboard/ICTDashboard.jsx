@@ -71,7 +71,11 @@ const ICTDashboard = () => {
   }, []);
 
   const myAssignedTickets = useMemo(
-    () => tickets.filter((ticket) => ticket?.assignedTo?._id === officerId),
+    () => tickets.filter((ticket) => {
+      const assignedToId = ticket?.assignedTo?._id?.toString?.() || ticket?.assignedTo?.toString?.();
+      const currentOfficerId = officerId?.toString?.();
+      return !!assignedToId && !!currentOfficerId && assignedToId === currentOfficerId;
+    }),
     [tickets, officerId]
   );
 
