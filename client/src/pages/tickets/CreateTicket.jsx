@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { FiFilePlus, FiPlus, FiUpload, FiX } from 'react-icons/fi';
+import { FiFile, FiFileText, FiImage, FiPlus, FiUpload, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import API from '../../api/axios';
 
@@ -21,6 +21,9 @@ const priorityOptions = ['Low', 'Medium', 'High', 'Critical'];
 
 const fileAccept =
   '.jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+const MAX_FILES = 5;
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const allowedExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif'];
 
 const normalizePriority = (value) => {
   const clean = String(value || '').trim().toLowerCase();
@@ -29,6 +32,21 @@ const normalizePriority = (value) => {
   if (clean === 'high') return 'High';
   if (clean === 'critical') return 'Critical';
   return 'Medium';
+};
+
+const formatFileSize = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getFileIcon = (filename) => {
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return <FiImage style={{ color: '#16a34a' }} />;
+  if (ext === 'pdf') return <FiFileText style={{ color: '#dc2626' }} />;
+  if (['doc', 'docx'].includes(ext)) return <FiFileText style={{ color: '#2563eb' }} />;
+  if (['xls', 'xlsx'].includes(ext)) return <FiFileText style={{ color: '#16a34a' }} />;
+  return <FiFile style={{ color: '#64748b' }} />;
 };
 
 const CreateTicket = () => {
@@ -40,7 +58,8 @@ const CreateTicket = () => {
   const [priority, setPriority] = useState('Medium');
   const [department, setDepartment] = useState(user?.department || '');
   const [description, setDescription] = useState('');
-  const [files, setFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -56,26 +75,50 @@ const CreateTicket = () => {
     );
   }, [title, category, description, department]);
 
-  const normalizeFiles = (list) => {
-    const arr = Array.from(list || []);
-    return arr.slice(0, 5);
+  const addFiles = (incoming) => {
+    if (!incoming.length) return;
+    setSelectedFiles((prev) => {
+      const next = [...prev];
+      incoming.forEach((file) => {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          toast.error(`File ${file.name} exceeds the 5MB limit`);
+          return;
+        }
+        if (!allowedExts.includes(ext)) {
+          toast.error('File type not allowed. Use JPG, PNG, PDF, Word or Excel');
+          return;
+        }
+        if (next.some((f) => f.name === file.name)) {
+          toast.error(`File ${file.name} is already selected`);
+          return;
+        }
+        if (next.length >= MAX_FILES) {
+          toast.error('Maximum 5 files allowed');
+          return;
+        }
+        next.push(file);
+      });
+      return next;
+    });
   };
 
   const onPickFiles = (e) => {
-    const picked = normalizeFiles(e.target.files);
-    const allowedExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif', 'txt'];
-    const invalid = picked.filter((f) => {
-      const ext = (f.name.split('.').pop() || '').toLowerCase();
-      const isTooLarge = f.size > 5 * 1024 * 1024;
-      if (isTooLarge) return true;
-      return !allowedExts.includes(ext);
-    });
-    if (invalid.length) {
-      toast.error('Some files are invalid. Use jpg, jpeg, png, gif, pdf, doc, docx, xls, xlsx, txt and max 5MB each.');
-      setFiles(picked.filter((f) => !invalid.includes(f)));
-      return;
-    }
-    setFiles(picked);
+    const picked = Array.from(e.target.files || []);
+    addFiles(picked);
+    e.target.value = '';
+  };
+
+  const onDropFiles = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const dropped = Array.from(e.dataTransfer.files || []);
+    addFiles(dropped);
+  };
+
+  const onRemoveFile = (indexToRemove) => {
+    setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const onSubmit = async (e) => {
@@ -105,12 +148,13 @@ const CreateTicket = () => {
       const newTicket = data?.data;
 
       // Upload attachments (if any)
-      if (files.length) {
+      if (selectedFiles.length) {
         const formData = new FormData();
-        files.forEach((file) => formData.append('attachments', file));
+        selectedFiles.forEach((file) => formData.append('attachments', file));
         await API.post(`/upload/ticket/${newTicket._id}`, formData);
       }
 
+      setSelectedFiles([]);
       toast.success('Ticket submitted successfully!');
       navigate(`/tickets/${newTicket._id}`);
     } catch (err) {
@@ -181,35 +225,105 @@ const CreateTicket = () => {
 
           <div>
             <label style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.9rem' }}>Attachments (up to 5)</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept={fileAccept}
-                style={{ display: 'none' }}
-                onChange={onPickFiles}
-              />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={fileAccept}
+              style={{ display: 'none' }}
+              onChange={onPickFiles}
+            />
+
+            {selectedFiles.length < MAX_FILES ? (
               <button
                 type="button"
-                className="btn btn-secondary"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={submitting}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={onDropFiles}
+                style={{
+                  marginTop: 8,
+                  width: '100%',
+                  border: `2px dashed ${isDragOver ? '#2563eb' : '#e2e8f0'}`,
+                  borderRadius: 10,
+                  padding: 24,
+                  background: isDragOver ? '#eff6ff' : '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 160ms ease',
+                  display: 'grid',
+                  gap: 8,
+                  justifyItems: 'center',
+                  color: 'var(--text)',
+                }}
               >
-                <FiUpload /> Choose Files
+                <FiUpload />
+                <span style={{ fontWeight: 700 }}>Click to select files or drag and drop</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  Accepted: JPG, PNG, PDF, Word, Excel - Max 5MB each - Up to 5 files
+                </span>
               </button>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.86rem' }}>
-                {files.length ? `${files.length} file(s) selected` : 'No files selected'}
-              </span>
-            </div>
-            {files.length > 0 && (
-              <ul style={{ margin: '10px 0 0', paddingLeft: 18 }}>
-                {files.map((f) => (
-                  <li key={f.name + f.size} style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                    {f.name}
-                  </li>
+            ) : (
+              <p style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+                Maximum files reached. Remove a file to add a different one.
+              </p>
+            )}
+
+            {selectedFiles.length > 0 && (
+              <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={`${file.name}-${file.size}`}
+                    style={{
+                      background: '#f8fafc',
+                      borderRadius: 8,
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      transition: 'opacity 160ms ease',
+                    }}
+                  >
+                    {getFileIcon(file.name)}
+                    <span
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: 'var(--text)',
+                        fontSize: '0.88rem',
+                      }}
+                      title={file.name}
+                    >
+                      {file.name}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{formatFileSize(file.size)}</span>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveFile(index)}
+                      aria-label={`Remove ${file.name}`}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#dc2626',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <FiX />
+                    </button>
+                  </div>
                 ))}
-              </ul>
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  {selectedFiles.length} of {MAX_FILES} files selected
+                </p>
+              </div>
             )}
           </div>
 
