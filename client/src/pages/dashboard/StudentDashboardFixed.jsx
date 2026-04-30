@@ -657,7 +657,7 @@ const StudentDashboardFixed = () => {
               </div>
               <div>
                 <div className="help-label">Phone</div>
-                <div className="help-value">+254 XXX XXX XXX</div>
+                <div className="help-value">+254791019668</div>
               </div>
               <div>
                 <div className="help-label">Location</div>

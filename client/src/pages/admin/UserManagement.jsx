@@ -4,6 +4,8 @@ import {
   FiAlertTriangle,
   FiArrowRight,
   FiEdit2,
+  FiEye,
+  FiEyeOff,
   FiMail,
   FiPlus,
   FiRefreshCw,
@@ -24,6 +26,7 @@ const initialCreateForm = {
   department: '',
   phone: '',
   password: '',
+  confirmPassword: '',
 };
 
 const initialEditForm = {
@@ -82,6 +85,8 @@ const UserManagement = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toggleLoadingId, setToggleLoadingId] = useState('');
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [showCreateConfirmPassword, setShowCreateConfirmPassword] = useState(false);
 
   const fetchUsers = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -186,9 +191,20 @@ const UserManagement = () => {
       setCreateError('Password must be at least 6 characters.');
       return;
     }
+    if (createForm.password !== createForm.confirmPassword) {
+      setCreateError('Password and confirm password do not match.');
+      return;
+    }
     setCreateLoading(true);
     try {
-      await API.post('/users', createForm);
+      await API.post('/users', {
+        name: createForm.name,
+        email: createForm.email,
+        role: createForm.role,
+        department: createForm.department,
+        phone: createForm.phone,
+        password: createForm.password,
+      });
       toast.success('User created successfully');
       closeCreateModal();
       await refreshAll({ silent: true });
@@ -431,7 +447,44 @@ const UserManagement = () => {
               </select>
               <input className="um-input" placeholder="Department" value={createForm.department} onChange={(e) => setCreateForm((p) => ({ ...p, department: e.target.value }))} />
               <input className="um-input" placeholder="Phone Number" value={createForm.phone} onChange={(e) => setCreateForm((p) => ({ ...p, phone: e.target.value }))} />
-              <input className="um-input" placeholder="Password *" type="password" value={createForm.password} onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))} />
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="um-input"
+                  placeholder="Password *"
+                  type={showCreatePassword ? 'text' : 'password'}
+                  style={{ paddingRight: 40 }}
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => setShowCreatePassword((prev) => !prev)}
+                  aria-label={showCreatePassword ? 'Hide password' : 'Show password'}
+                  style={{ position: 'absolute', right: 4, top: 4, minHeight: 30, padding: '0 8px' }}
+                >
+                  {showCreatePassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="um-input"
+                  placeholder="Confirm Password *"
+                  type={showCreateConfirmPassword ? 'text' : 'password'}
+                  style={{ paddingRight: 40 }}
+                  value={createForm.confirmPassword}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => setShowCreateConfirmPassword((prev) => !prev)}
+                  aria-label={showCreateConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  style={{ position: 'absolute', right: 4, top: 4, minHeight: 30, padding: '0 8px' }}
+                >
+                  {showCreateConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
 
               {createError && <p className="um-form-error">{createError}</p>}
 
