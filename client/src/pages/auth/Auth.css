@@ -521,10 +521,44 @@
     line-height: 1.1;
   }
 
-  .auth-brand-divider,
-  .auth-feature-list,
-  .auth-brand-footer,
+  .auth-brand-divider {
+    display: none;
+  }
+
+  .auth-feature-list {
+    display: grid;
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    gap: 4px;
+  }
+
+  .auth-feature-list li {
+    font-size: 0.76rem;
+    line-height: 1.25;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.9);
+    flex-wrap: wrap;
+  }
+
+  .auth-feature-list svg {
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+
+  .auth-brand-footer {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.7rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
   .auth-brand-bottom {
+    display: block;
+    margin-top: 6px;
+  }
+
+  .auth-brand-login-link {
     display: none;
   }
 
@@ -568,6 +602,21 @@
 
   .auth-brand-system {
     font-size: 0.76rem;
+  }
+
+  .auth-feature-list {
+    gap: 3px;
+    margin-top: 5px;
+  }
+
+  .auth-feature-list li {
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .auth-brand-footer {
+    margin-top: 5px;
+    font-size: 0.66rem;
   }
 
   .auth-form-panel {
