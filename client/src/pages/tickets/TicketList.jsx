@@ -69,13 +69,6 @@ const TicketList = () => {
 
   const [visibleCount, setVisibleCount] = useState(10);
 
-  const [stats, setStats] = useState({
-    total: 0,
-    open: 0,
-    inProgress: 0,
-    resolvedToday: 0,
-  });
-
   const fetchTickets = async ({ silent = false } = {}) => {
     setLoading(true);
     setError('');
@@ -96,40 +89,11 @@ const TicketList = () => {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const today = new Date();
-      const todayKey = today.toDateString();
-
-      const { data } = await API.get('/tickets/stats');
-      const byStatus = data?.data?.byStatus || [];
-      const total = byStatus.reduce((acc, row) => acc + (row.count || 0), 0);
-      const open = byStatus.find((r) => r._id === 'Open')?.count || 0;
-      const inProgress = byStatus.find((r) => r._id === 'In Progress')?.count || 0;
-
-      // Resolved Today: derive from resolvedAt timestamps
-      const resolvedRes = await API.get('/tickets', { params: { status: 'Resolved' } });
-      const resolvedTickets = resolvedRes?.data?.data || [];
-      const resolvedToday = resolvedTickets.filter((t) => {
-        const dt = t?.resolvedAt ? new Date(t.resolvedAt).toDateString() : null;
-        return dt === todayKey;
-      }).length;
-
-      setStats({ total, open, inProgress, resolvedToday });
-    } catch {
-      // If stats fail (rare), keep ticket list usable.
-    }
-  };
 
   useEffect(() => {
     fetchTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, priorityFilter, categoryFilter]);
-
-  useEffect(() => {
-    if (isPrivileged) fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role]);
 
   const filteredTickets = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -143,6 +107,13 @@ const TicketList = () => {
 
   const visibleTickets = filteredTickets.slice(0, visibleCount);
   const hasMore = filteredTickets.length > visibleCount;
+  const stats = useMemo(() => ({
+    total: tickets.length,
+    open: tickets.filter((t) => t?.status === 'Open').length,
+    inProgress: tickets.filter((t) => t?.status === 'In Progress').length,
+    resolved: tickets.filter((t) => t?.status === 'Resolved').length,
+    closed: tickets.filter((t) => t?.status === 'Closed').length,
+  }), [tickets]);
 
   if (loading) {
     return (
@@ -198,8 +169,8 @@ const TicketList = () => {
           <div className="stat-card">
             <div className="stat-icon" style={{ color: '#16a34a' }}><FiTag /></div>
             <div>
-              <p className="stat-value">{stats.resolvedToday}</p>
-              <p className="stat-label">Resolved Today</p>
+              <p className="stat-value">{stats.resolved}</p>
+              <p className="stat-label">Resolved</p>
             </div>
           </div>
         </div>
@@ -284,8 +255,15 @@ const TicketList = () => {
                       style={isCritical ? { boxShadow: 'inset 4px 0 0 rgba(239,68,68,0.55)' } : undefined}
                     >
                       <td>
-                        <span className="badge" style={{ fontSize: '0.76rem' }}>
-                          {t.ticketNumber}
+                        <span
+                          style={{
+                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                            color: 'var(--primary)',
+                            fontWeight: 700,
+                            fontSize: '0.84rem',
+                          }}
+                        >
+                          {t?.ticketNumber || '-'}
                         </span>
                       </td>
                       <td>{t.title}</td>
