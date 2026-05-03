@@ -109,7 +109,8 @@ const rateColor = (rate) => {
   return '#16a34a';
 };
 
-const toRows = (arr = []) => arr.map((x) => ({ label: x?._id || 'Unknown', count: Number(x?.count || 0) }));
+const toRows = (arr) =>
+  (Array.isArray(arr) ? arr : []).map((x) => ({ label: x?._id || 'Unknown', count: Number(x?.count || 0) }));
 
 const BarRows = ({ rows, total, colorFn }) => {
   if (!rows.length) return <div className="empty-state">No data available</div>;
@@ -306,6 +307,248 @@ const Reports = () => {
     if (activeSection === SECTION.USERS) return fetchUsers();
   };
 
+  const renderAssetsReportSection = () => {
+    if (assetLoading) {
+      return (
+        <div className="spinner-wrap">
+          <div className="spinner" />
+        </div>
+      );
+    }
+    if (assetError) {
+      return renderError(assetError, fetchAssetsReport);
+    }
+    if (!assetData) {
+      return (
+        <div className="card">
+          <div className="card-body">
+            <div className="empty-state">
+              <FiAlertCircle />
+              <p>Loading asset report…</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    try {
+      const summary = assetData?.summary ?? {};
+      const apiTotalAssets = Number(summary?.totalAssets ?? summary?.total ?? 0);
+      const safeTotalAssets =
+        apiTotalAssets > 0 ? apiTotalAssets : (Array.isArray(allAssets) ? allAssets.length : 0);
+      const apiTotalValueRaw = summary?.totalValue;
+      const apiTotalValueNum =
+        apiTotalValueRaw !== undefined && apiTotalValueRaw !== null ? Number(apiTotalValueRaw) : NaN;
+      const displayTotalValue = Number.isFinite(apiTotalValueNum)
+        ? apiTotalValueNum
+        : Number(assetComputed?.totalPurchaseValue ?? 0);
+
+      const byStatus = toRows(assetData?.byStatus);
+      const byCategory = toRows(assetData?.byCategory);
+      const byDepartment = toRows(assetData?.byDepartment);
+      const totalForBars = safeTotalAssets || 1;
+
+      return (
+        <>
+          <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+            <article className="stat-card">
+              <span>
+                <p className="stat-value">{safeTotalAssets}</p>
+                <p className="stat-label">Total Assets</p>
+              </span>
+            </article>
+            <article className="stat-card">
+              <span>
+                <p className="stat-value" style={{ fontSize: '1.1rem' }}>
+                  {formatKES(displayTotalValue)}
+                </p>
+                <p className="stat-label">Total Asset Value</p>
+              </span>
+            </article>
+            <article className="stat-card">
+              <span>
+                <p className="stat-value">{(assetComputed?.expiringSoon || []).length}</p>
+                <p className="stat-label">Warranty Expiring Soon</p>
+              </span>
+            </article>
+            <article className="stat-card">
+              <span>
+                <p className="stat-value">{(assetComputed?.expired || []).length}</p>
+                <p className="stat-label">Warranty Expired</p>
+              </span>
+            </article>
+          </div>
+
+          <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <SectionCard title="Assets by Status">
+              <BarRows rows={byStatus} total={totalForBars} colorFn={barColorAssetStatus} />
+            </SectionCard>
+            <SectionCard title="Assets by Condition">
+              <BarRows
+                rows={[...(assetComputed?.byCondition || [])].sort((a, b) => b.count - a.count)}
+                total={totalForBars}
+                colorFn={barColorCondition}
+              />
+            </SectionCard>
+          </div>
+
+          <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <SectionCard title="Assets by Category">
+              <BarRows
+                rows={[...byCategory].sort((a, b) => b.count - a.count)}
+                total={totalForBars}
+                colorFn={() => '#2563eb'}
+              />
+            </SectionCard>
+            <SectionCard title="Asset Value by Category">
+              {!(assetComputed?.valueByCategory || []).length ? (
+                <div className="empty-state">No value data</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {(assetComputed?.valueByCategory || []).map((row, idx) => (
+                    <div
+                      key={row.label}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        padding: 10,
+                        background: idx === 0 ? '#eff6ff' : '#fff',
+                      }}
+                    >
+                      <span style={{ color: 'var(--text)', fontWeight: idx === 0 ? 800 : 600 }}>{row.label}</span>
+                      <span style={{ color: '#1d4ed8', fontWeight: 700 }}>{formatKES(row.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          </div>
+
+          <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <SectionCard title="Assets by Department">
+              <BarRows
+                rows={[...byDepartment].sort((a, b) => b.count - a.count)}
+                total={totalForBars}
+                colorFn={() => '#0ea5e9'}
+              />
+            </SectionCard>
+            <SectionCard title="Maintenance Summary">
+              <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <article className="stat-card">
+                  <span>
+                    <p className="stat-value">{assetComputed?.maintenance?.records ?? 0}</p>
+                    <p className="stat-label">Total Maintenance Records</p>
+                  </span>
+                </article>
+                <article className="stat-card">
+                  <span>
+                    <p className="stat-value" style={{ fontSize: '1.1rem' }}>
+                      {formatKES(assetComputed?.maintenance?.cost ?? 0)}
+                    </p>
+                    <p className="stat-label">Total Maintenance Cost</p>
+                  </span>
+                </article>
+              </div>
+            </SectionCard>
+          </div>
+
+          <SectionCard title="Warranty Expiring Soon">
+            {!(assetComputed?.expiringSoon || []).length ? (
+              <div className="empty-state">No assets expiring soon</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Asset Tag</th>
+                      <th>Name</th>
+                      <th>Category</th>
+                      <th>Department</th>
+                      <th>Warranty Expiry</th>
+                      <th>Days Remaining</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(assetComputed?.expiringSoon || []).map((a) => (
+                      <tr
+                        key={a?._id || a?.assetTag}
+                        className="um-row-hover"
+                        style={{
+                          background:
+                            a?.daysRemaining <= 7
+                              ? '#fef2f2'
+                              : a?.daysRemaining <= 30
+                                ? '#fff7ed'
+                                : undefined,
+                        }}
+                      >
+                        <td>{a?.assetTag}</td>
+                        <td>{a?.name}</td>
+                        <td>{a?.category}</td>
+                        <td>{a?.department || '-'}</td>
+                        <td>{formatDate(a?.warrantyExpiryDate ?? a?.warrantyExpiry)}</td>
+                        <td>{a?.daysRemaining}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Expired Warranty">
+            {!(assetComputed?.expired || []).length ? (
+              <div className="empty-state">No expired warranties</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Asset Tag</th>
+                      <th>Name</th>
+                      <th>Category</th>
+                      <th>Department</th>
+                      <th>Warranty Expiry</th>
+                      <th>Days Overdue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(assetComputed?.expired || []).map((a) => (
+                      <tr key={a?._id || a?.assetTag} className="um-row-hover">
+                        <td>{a?.assetTag}</td>
+                        <td>{a?.name}</td>
+                        <td>{a?.category}</td>
+                        <td>{a?.department || '-'}</td>
+                        <td>{formatDate(a?.warrantyExpiryDate ?? a?.warrantyExpiry)}</td>
+                        <td>{a?.daysOverdue}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionCard>
+        </>
+      );
+    } catch {
+      return (
+        <div className="card">
+          <div className="card-body">
+            <div className="empty-state">
+              <FiAlertCircle />
+              <p>Unable to load asset report. Please refresh the page.</p>
+              <button className="btn btn-primary" type="button" onClick={() => fetchAssetsReport()}>
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
   const navItems = [
     { key: SECTION.OVERVIEW, title: 'Dashboard Overview', desc: 'Global KPI snapshot and critical issues', icon: FiGrid, adminOnly: false },
     { key: SECTION.TICKETS, title: 'Ticket Reports', desc: 'Status, priority, trends and resolution metrics', icon: FiBarChart2, adminOnly: false },
@@ -356,12 +599,18 @@ const Reports = () => {
     const conditionMap = new Map();
     const maintenance = { records: 0, cost: 0 };
     const valueByCategory = new Map();
-    allAssets.forEach((a) => {
+    let totalPurchaseValue = 0;
+
+    (Array.isArray(allAssets) ? allAssets : []).forEach((a) => {
+      if (!a || typeof a !== 'object') return;
       const condition = a.condition || 'Unknown';
       conditionMap.set(condition, (conditionMap.get(condition) || 0) + 1);
       const cat = a.category || 'Uncategorized';
-      valueByCategory.set(cat, (valueByCategory.get(cat) || 0) + Number(a.purchasePrice || 0));
-      const wr = a.warrantyExpiryDate ? new Date(a.warrantyExpiryDate).getTime() : NaN;
+      const price = Number(a.purchasePrice || 0);
+      totalPurchaseValue += price;
+      valueByCategory.set(cat, (valueByCategory.get(cat) || 0) + price);
+      const warrantyRaw = a.warrantyExpiryDate ?? a.warrantyExpiry;
+      const wr = warrantyRaw ? new Date(warrantyRaw).getTime() : NaN;
       if (!Number.isNaN(wr)) {
         const days = Math.ceil((wr - now) / (1000 * 60 * 60 * 24));
         if (days < 0) expired.push({ ...a, daysOverdue: Math.abs(days) });
@@ -369,7 +618,7 @@ const Reports = () => {
       }
       const m = Array.isArray(a.maintenanceHistory) ? a.maintenanceHistory : [];
       maintenance.records += m.length;
-      maintenance.cost += m.reduce((s, it) => s + Number(it.cost || 0), 0);
+      maintenance.cost += (m || []).reduce((s, it) => s + Number(it?.cost ?? 0), 0);
     });
     return {
       byCondition: [...conditionMap.entries()].map(([label, count]) => ({ label, count })),
@@ -379,6 +628,7 @@ const Reports = () => {
       expiringSoon: in30.sort((a, b) => a.daysRemaining - b.daysRemaining),
       expired: expired.sort((a, b) => b.daysOverdue - a.daysOverdue),
       maintenance,
+      totalPurchaseValue,
     };
   }, [allAssets]);
 
@@ -667,113 +917,7 @@ const Reports = () => {
         </>
       )}
 
-      {activeSection === SECTION.ASSETS && (
-        <>
-          {assetLoading && <div className="spinner-wrap"><div className="spinner" /></div>}
-          {!assetLoading && assetError && renderError(assetError, fetchAssetsReport)}
-          {!assetLoading && !assetError && assetData && (
-            <>
-              <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-                <article className="stat-card"><span><p className="stat-value">{assetData?.summary?.totalAssets || 0}</p><p className="stat-label">Total Assets</p></span></article>
-                <article className="stat-card"><span><p className="stat-value" style={{ fontSize: '1.1rem' }}>{formatKES(assetData?.summary?.totalValue || 0)}</p><p className="stat-label">Total Asset Value</p></span></article>
-                <article className="stat-card"><span><p className="stat-value">{assetComputed.expiringSoon.length}</p><p className="stat-label">Warranty Expiring Soon</p></span></article>
-                <article className="stat-card"><span><p className="stat-value">{assetComputed.expired.length}</p><p className="stat-label">Warranty Expired</p></span></article>
-              </div>
-
-              <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                <SectionCard title="Assets by Status">
-                  <BarRows rows={toRows(assetData.byStatus)} total={assetData?.summary?.totalAssets || 0} colorFn={barColorAssetStatus} />
-                </SectionCard>
-                <SectionCard title="Assets by Condition">
-                  <BarRows
-                    rows={[...assetComputed.byCondition].sort((a, b) => b.count - a.count)}
-                    total={assetData?.summary?.totalAssets || 0}
-                    colorFn={barColorCondition}
-                  />
-                </SectionCard>
-              </div>
-
-              <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                <SectionCard title="Assets by Category">
-                  <BarRows rows={toRows(assetData.byCategory).sort((a, b) => b.count - a.count)} total={assetData?.summary?.totalAssets || 0} colorFn={() => '#2563eb'} />
-                </SectionCard>
-                <SectionCard title="Asset Value by Category">
-                  {!assetComputed.valueByCategory.length ? (
-                    <div className="empty-state">No value data</div>
-                  ) : (
-                    <div style={{ display: 'grid', gap: 8 }}>
-                      {assetComputed.valueByCategory.map((row, idx) => (
-                        <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', border: '1px solid var(--border)', borderRadius: 8, padding: 10, background: idx === 0 ? '#eff6ff' : '#fff' }}>
-                          <span style={{ color: 'var(--text)', fontWeight: idx === 0 ? 800 : 600 }}>{row.label}</span>
-                          <span style={{ color: '#1d4ed8', fontWeight: 700 }}>{formatKES(row.value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </SectionCard>
-              </div>
-
-              <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                <SectionCard title="Assets by Department">
-                  <BarRows rows={toRows(assetData.byDepartment).sort((a, b) => b.count - a.count)} total={assetData?.summary?.totalAssets || 0} colorFn={() => '#0ea5e9'} />
-                </SectionCard>
-                <SectionCard title="Maintenance Summary">
-                  <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                    <article className="stat-card"><span><p className="stat-value">{assetComputed.maintenance.records}</p><p className="stat-label">Total Maintenance Records</p></span></article>
-                    <article className="stat-card"><span><p className="stat-value" style={{ fontSize: '1.1rem' }}>{formatKES(assetComputed.maintenance.cost)}</p><p className="stat-label">Total Maintenance Cost</p></span></article>
-                  </div>
-                </SectionCard>
-              </div>
-
-              <SectionCard title="Warranty Expiring Soon">
-                {!assetComputed.expiringSoon.length ? (
-                  <div className="empty-state">No assets expiring soon</div>
-                ) : (
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Asset Tag</th><th>Name</th><th>Category</th><th>Department</th><th>Warranty Expiry</th><th>Days Remaining</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {assetComputed.expiringSoon.map((a) => (
-                          <tr key={a._id} className="um-row-hover" style={{ background: a.daysRemaining <= 7 ? '#fef2f2' : a.daysRemaining <= 30 ? '#fff7ed' : undefined }}>
-                            <td>{a.assetTag}</td><td>{a.name}</td><td>{a.category}</td><td>{a.department || '-'}</td><td>{formatDate(a.warrantyExpiryDate)}</td><td>{a.daysRemaining}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </SectionCard>
-
-              <SectionCard title="Expired Warranty">
-                {!assetComputed.expired.length ? (
-                  <div className="empty-state">No expired warranties</div>
-                ) : (
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Asset Tag</th><th>Name</th><th>Category</th><th>Department</th><th>Warranty Expiry</th><th>Days Overdue</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {assetComputed.expired.map((a) => (
-                          <tr key={a._id} className="um-row-hover">
-                            <td>{a.assetTag}</td><td>{a.name}</td><td>{a.category}</td><td>{a.department || '-'}</td><td>{formatDate(a.warrantyExpiryDate)}</td><td>{a.daysOverdue}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </SectionCard>
-            </>
-          )}
-        </>
-      )}
+      {activeSection === SECTION.ASSETS && renderAssetsReportSection()}
 
       {activeSection === SECTION.PERFORMANCE && isAdmin && (
         <>
