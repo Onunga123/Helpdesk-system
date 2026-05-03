@@ -129,7 +129,7 @@ const AssetList = () => {
   const fetchStats = async () => {
     try {
       const { data } = await API.get('/assets/stats');
-      const byStatus = data?.data?.byStatus || [];
+      const byStatus = Array.isArray(data?.data?.byStatus) ? data.data.byStatus : [];
       const find = (id) => byStatus.find((x) => x._id === id)?.count || 0;
       setStats({
         total: data?.data?.total ?? byStatus.reduce((acc, x) => acc + (x.count || 0), 0),

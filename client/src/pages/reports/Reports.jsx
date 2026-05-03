@@ -113,11 +113,12 @@ const toRows = (arr) =>
   (Array.isArray(arr) ? arr : []).map((x) => ({ label: x?._id || 'Unknown', count: Number(x?.count || 0) }));
 
 const BarRows = ({ rows, total, colorFn }) => {
-  if (!rows.length) return <div className="empty-state">No data available</div>;
-  const max = Math.max(...rows.map((r) => r.count), 1);
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return <div className="empty-state">No data available</div>;
+  const max = Math.max(...list.map((r) => r.count), 1);
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      {rows.map((r) => {
+      {list.map((r) => {
         const pct = total > 0 ? (r.count / total) * 100 : 0;
         const widthPct = max > 0 ? (r.count / max) * 100 : 0;
         return (
@@ -609,7 +610,8 @@ const Reports = () => {
 
   const topSubmitters = useMemo(() => {
     const map = new Map();
-    allTickets.forEach((t) => {
+    const tickets = Array.isArray(allTickets) ? allTickets : [];
+    tickets.forEach((t) => {
       const u = t.submittedBy || {};
       const id = u._id || `deleted-${t._id}`;
       if (!map.has(id)) {
@@ -654,7 +656,7 @@ const Reports = () => {
       }
       const m = Array.isArray(a.maintenanceHistory) ? a.maintenanceHistory : [];
       maintenance.records += m.length;
-      maintenance.cost += (m || []).reduce((s, it) => s + Number(it?.cost ?? 0), 0);
+      maintenance.cost += m.reduce((s, it) => s + Number(it?.cost ?? 0), 0);
     });
     return {
       byCondition: [...conditionMap.entries()].map(([label, count]) => ({ label, count })),
@@ -679,7 +681,8 @@ const Reports = () => {
   }, [ticketData]);
 
   const ticketResolutionTimes = useMemo(() => {
-    const withTimes = allTickets
+    const tickets = Array.isArray(allTickets) ? allTickets : [];
+    const withTimes = tickets
       .filter((t) => (t.status === 'Resolved' || t.status === 'Closed') && t.createdAt && t.updatedAt)
       .map((t) => {
         const created = new Date(t.createdAt).getTime();
@@ -826,11 +829,11 @@ const Reports = () => {
                 </SectionCard>
 
                 <SectionCard title="Critical Tickets Requiring Attention" right={<Link to="/tickets" className="btn btn-sm">View All</Link>}>
-                  {!(overviewData.criticalTickets || []).length ? (
+                  {!(Array.isArray(overviewData.criticalTickets) ? overviewData.criticalTickets : []).length ? (
                     <div className="empty-state">No critical tickets. All good!</div>
                   ) : (
                     <div style={{ display: 'grid', gap: 8 }}>
-                      {overviewData.criticalTickets.map((t) => (
+                      {(Array.isArray(overviewData.criticalTickets) ? overviewData.criticalTickets : []).map((t) => (
                         <div key={t._id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                             <strong style={{ color: 'var(--text)', fontSize: '0.88rem' }}>{t.ticketNumber}</strong>

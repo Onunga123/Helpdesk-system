@@ -91,7 +91,8 @@ assetSchema.virtual('isUnderWarranty').get(function () {
 });
 
 assetSchema.virtual('totalMaintenanceCost').get(function () {
-  return this.maintenanceHistory.reduce((total, record) => total + (record.cost || 0), 0);
+  const history = Array.isArray(this.maintenanceHistory) ? this.maintenanceHistory : [];
+  return history.reduce((total, record) => total + (record.cost || 0), 0);
 });
 
 assetSchema.pre('save', async function (next) {

@@ -347,7 +347,9 @@ const KnowledgeBase = () => {
             </div>
             <div>
               <p className="stat-value">
-                {formatNumber((stats?.topViewed || []).reduce((acc, it) => acc + (it.views || 0), 0))}
+                {formatNumber(
+                  (Array.isArray(stats?.topViewed) ? stats.topViewed : []).reduce((acc, it) => acc + (it.views || 0), 0)
+                )}
               </p>
               <p className="stat-label">Total Views (Top 5)</p>
             </div>
