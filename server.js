@@ -13,10 +13,30 @@ dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
 const app = express();
 
+const corsOrigins = [
+  'https://helpdinesk-system-smoky.vercel.app',
+  'https://helpdesk-system-smoky.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+].filter(Boolean);
+
+const corsOptions = {
+  origin: [...new Set(corsOrigins)],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 app.get('/', (req, res) => {
   res.json({

@@ -245,7 +245,12 @@ const Reports = () => {
       setAllAssets(Array.isArray(assetsRes?.data?.data) ? assetsRes.data.data : []);
       setLastUpdated(new Date());
     } catch (err) {
-      setAssetError(err?.response?.data?.message || 'Failed to load asset report.');
+      setAssetData(null);
+      setAllAssets([]);
+      setAssetError(
+        err?.response?.data?.message ||
+          'Asset report is unavailable. The server may be starting up — wait ~30 seconds and try again.'
+      );
     } finally {
       setAssetLoading(false);
     }
@@ -324,7 +329,13 @@ const Reports = () => {
           <div className="card-body">
             <div className="empty-state">
               <FiAlertCircle />
-              <p>Loading asset report…</p>
+              <p>Asset report is unavailable. The server may be starting up.</p>
+              <p className="muted" style={{ fontSize: '0.88rem' }}>
+                Please wait about 30 seconds and refresh the page, or tap Retry.
+              </p>
+              <button className="btn btn-primary" type="button" onClick={() => fetchAssetsReport()}>
+                Retry
+              </button>
             </div>
           </div>
         </div>
@@ -343,10 +354,35 @@ const Reports = () => {
         ? apiTotalValueNum
         : Number(assetComputed?.totalPurchaseValue ?? 0);
 
-      const byStatus = toRows(assetData?.byStatus);
-      const byCategory = toRows(assetData?.byCategory);
-      const byDepartment = toRows(assetData?.byDepartment);
+      const byStatus = toRows(assetData?.byStatus ?? []);
+      const byCategory = toRows(assetData?.byCategory ?? []);
+      const byDepartment = toRows(assetData?.byDepartment ?? []);
       const totalForBars = safeTotalAssets || 1;
+
+      const warrantyExpiringApi = Array.isArray(assetData?.warrantyExpiring) ? assetData.warrantyExpiring : [];
+      const warrantyExpiredApi = Array.isArray(assetData?.warrantyExpired) ? assetData.warrantyExpired : [];
+      const expiringSoonRows = (assetComputed?.expiringSoon || []).length
+        ? assetComputed.expiringSoon
+        : warrantyExpiringApi;
+      const expiredRows = (assetComputed?.expired || []).length ? assetComputed.expired : warrantyExpiredApi;
+
+      const expiringCount = Number(
+        summary?.warrantyExpiringCount ??
+          expiringSoonRows.length ??
+          (warrantyExpiringApi?.length || 0)
+      );
+      const expiredCount = Number(
+        summary?.warrantyExpiredCount ?? expiredRows.length ?? (warrantyExpiredApi?.length || 0)
+      );
+
+      const apiValueRows = (assetData?.valueByCategory ?? []).map((row) => ({
+        label: row?._id ?? row?.category ?? 'Unknown',
+        value: Number(row?.totalValue ?? row?.value ?? 0),
+      }));
+      const valueByCategoryDisplay =
+        (assetComputed?.valueByCategory || []).length > 0
+          ? assetComputed.valueByCategory
+          : apiValueRows;
 
       return (
         <>
@@ -367,13 +403,13 @@ const Reports = () => {
             </article>
             <article className="stat-card">
               <span>
-                <p className="stat-value">{(assetComputed?.expiringSoon || []).length}</p>
+                <p className="stat-value">{Number.isFinite(expiringCount) ? expiringCount : 0}</p>
                 <p className="stat-label">Warranty Expiring Soon</p>
               </span>
             </article>
             <article className="stat-card">
               <span>
-                <p className="stat-value">{(assetComputed?.expired || []).length}</p>
+                <p className="stat-value">{Number.isFinite(expiredCount) ? expiredCount : 0}</p>
                 <p className="stat-label">Warranty Expired</p>
               </span>
             </article>
@@ -401,11 +437,11 @@ const Reports = () => {
               />
             </SectionCard>
             <SectionCard title="Asset Value by Category">
-              {!(assetComputed?.valueByCategory || []).length ? (
+              {!(valueByCategoryDisplay || []).length ? (
                 <div className="empty-state">No value data</div>
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  {(assetComputed?.valueByCategory || []).map((row, idx) => (
+                  {(valueByCategoryDisplay || []).map((row, idx) => (
                     <div
                       key={row.label}
                       style={{
@@ -455,7 +491,7 @@ const Reports = () => {
           </div>
 
           <SectionCard title="Warranty Expiring Soon">
-            {!(assetComputed?.expiringSoon || []).length ? (
+            {!(expiringSoonRows || []).length ? (
               <div className="empty-state">No assets expiring soon</div>
             ) : (
               <div className="table-wrap">
@@ -471,7 +507,7 @@ const Reports = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(assetComputed?.expiringSoon || []).map((a) => (
+                    {(expiringSoonRows || []).map((a) => (
                       <tr
                         key={a?._id || a?.assetTag}
                         className="um-row-hover"
@@ -499,7 +535,7 @@ const Reports = () => {
           </SectionCard>
 
           <SectionCard title="Expired Warranty">
-            {!(assetComputed?.expired || []).length ? (
+            {!(expiredRows || []).length ? (
               <div className="empty-state">No expired warranties</div>
             ) : (
               <div className="table-wrap">
@@ -515,7 +551,7 @@ const Reports = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(assetComputed?.expired || []).map((a) => (
+                    {(expiredRows || []).map((a) => (
                       <tr key={a?._id || a?.assetTag} className="um-row-hover">
                         <td>{a?.assetTag}</td>
                         <td>{a?.name}</td>
