@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   FaTachometerAlt, FaTicketAlt, FaBook, FaLaptop,
-  FaChartBar, FaUsers, FaSignOutAlt, FaTimes,
+  FaChartBar, FaUsers, FaSignOutAlt, FaTimes, FaUserCog,
 } from 'react-icons/fa';
 import './Layout.css';
 
@@ -48,6 +48,12 @@ const Sidebar = ({ isOpen, onClose, onLogout, user }) => {
       icon: <FaUsers />,
       label: 'User Management',
       roles: ['admin'],
+    },
+    {
+      path: '/account-settings',
+      icon: <FaUserCog />,
+      label: 'Account Settings',
+      roles: ['admin', 'ict_officer', 'staff', 'student'],
     },
   ];
 

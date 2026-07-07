@@ -17,6 +17,7 @@ import AssetList from "./pages/assets/AssetList";
 import AssetDetail from "./pages/assets/AssetDetail";
 import Reports from "./pages/reports/Reports";
 import UserManagement from "./pages/admin/UserManagement";
+import AccountSettings from "./pages/account/AccountSettings";
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user } = useSelector((state) => state.auth);
@@ -55,6 +56,8 @@ function App() {
           <Route path="assets/:id" element={<ProtectedRoute roles={["admin", "ict_officer"]}><AssetDetail /></ProtectedRoute>} />
           <Route path="reports" element={<ProtectedRoute roles={["admin", "ict_officer"]}><Reports /></ProtectedRoute>} />
           <Route path="admin/users" element={<ProtectedRoute roles={["admin"]}><UserManagement /></ProtectedRoute>} />
+          <Route path="account-settings" element={<AccountSettings />} />
+          <Route path="manage-accounts" element={<Navigate to="/account-settings" replace />} />
         </Route>
       </Routes>
     </Router>

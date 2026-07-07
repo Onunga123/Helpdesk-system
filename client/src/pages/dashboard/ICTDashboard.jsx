@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import toast from 'react-hot-toast';
 import {
   FiArrowRight,
   FiAlertTriangle,
@@ -331,11 +330,10 @@ const ICTDashboard = () => {
               </span>
               <FiArrowRight />
             </Link>
-            <button
-              type="button"
+            <Link
               className="btn"
+              to="/account-settings"
               style={{ justifyContent: 'space-between', padding: '12px 14px' }}
-              onClick={() => toast('Profile settings screen is coming soon')}
             >
               <span style={{ display: 'grid', gap: 2 }}>
                 <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center', color: '#475569', fontWeight: 700 }}>
@@ -346,7 +344,7 @@ const ICTDashboard = () => {
                 </span>
               </span>
               <FiArrowRight />
-            </button>
+            </Link>
           </div>
         </article>
       </div>

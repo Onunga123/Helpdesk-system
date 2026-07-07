@@ -1,0 +1,57 @@
+.account-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.account-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.account-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #eff6ff;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.account-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-avatar span {
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.account-hidden-input {
+  display: none;
+}
+
+.account-password-wrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.theme-radio-group {
+  display: grid;
+  gap: 8px;
+}
+
+.theme-radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+}

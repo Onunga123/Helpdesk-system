@@ -34,7 +34,7 @@ const registerUser = asyncHandler(async (req, res) => {
       role: user.role,
       department: user.department,
       phone: user.phone,
-      token: generateToken(user._id, user.role),
+      token: generateToken(user._id, user.role, user.tokenVersion),
     },
   });
 });
@@ -67,7 +67,7 @@ const loginUser = asyncHandler(async (req, res) => {
       department: user.department,
       phone: user.phone,
       isActive: user.isActive,
-      token: generateToken(user._id, user.role),
+      token: generateToken(user._id, user.role, user.tokenVersion),
     },
   });
 });
@@ -104,7 +104,7 @@ const updateProfile = asyncHandler(async (req, res) => {
       role: updatedUser.role,
       department: updatedUser.department,
       phone: updatedUser.phone,
-      token: generateToken(updatedUser._id, updatedUser.role),
+      token: generateToken(updatedUser._id, updatedUser.role, updatedUser.tokenVersion),
     },
   });
 });

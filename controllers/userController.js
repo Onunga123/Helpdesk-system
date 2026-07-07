@@ -2,6 +2,30 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 // FIX 1: Removed unused generateToken import
 
+const sanitizeUser = (user, req) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  department: user.department || '',
+  phone: user.phone || '',
+  staffId: user.staffId || '',
+  jobTitle: user.jobTitle || '',
+  username: user.username || user.email?.split('@')?.[0] || '',
+  profileImage: user.profileImage || '',
+  notificationPreferences: user.notificationPreferences || {},
+  appearancePreferences: user.appearancePreferences || {},
+  themePreference: user.themePreference || user.appearancePreferences?.theme || 'system',
+  isActive: user.isActive,
+  lastLogin: user.lastLogin || null,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+  activeSession: {
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent') || 'Unknown',
+  },
+});
+
 const getUsers = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.role) filter.role = req.query.role;
@@ -34,7 +58,7 @@ const getUserById = asyncHandler(async (req, res) => {
 });
 
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, department, phone } = req.body;
+  const { name, email, password, role, department, phone, staffId, jobTitle, username } = req.body;
 
   if (!name || !email || !password) {
     res.status(400);
@@ -60,6 +84,9 @@ const createUser = asyncHandler(async (req, res) => {
     role: role || 'student',
     department: department || '',
     phone: phone || '',
+    staffId: staffId || '',
+    jobTitle: jobTitle || '',
+    username: username || email.split('@')[0],
   });
 
   res.status(201).json({
@@ -71,6 +98,9 @@ const createUser = asyncHandler(async (req, res) => {
       role: user.role,
       department: user.department,
       phone: user.phone,
+      staffId: user.staffId,
+      jobTitle: user.jobTitle,
+      username: user.username,
       isActive: user.isActive,
     },
   });
@@ -106,6 +136,9 @@ const updateUser = asyncHandler(async (req, res) => {
   user.role = req.body.role || user.role;
   user.department = req.body.department || user.department;
   user.phone = req.body.phone || user.phone;
+  user.staffId = req.body.staffId || user.staffId;
+  user.jobTitle = req.body.jobTitle || user.jobTitle;
+  user.username = req.body.username || user.username;
 
   if (typeof req.body.isActive === 'boolean') {
     user.isActive = req.body.isActive;
@@ -126,8 +159,152 @@ const updateUser = asyncHandler(async (req, res) => {
       role: updatedUser.role,
       department: updatedUser.department,
       phone: updatedUser.phone,
+      staffId: updatedUser.staffId,
+      jobTitle: updatedUser.jobTitle,
+      username: updatedUser.username,
       isActive: updatedUser.isActive,
     },
+  });
+});
+
+const getCurrentUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('-password');
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  res.json({ success: true, data: sanitizeUser(user, req) });
+});
+
+const updateCurrentUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const { name, email, phone, department, jobTitle, username } = req.body;
+  if (email && email !== user.email) {
+    const exists = await User.findOne({ email, _id: { $ne: req.user._id } });
+    if (exists) {
+      res.status(400);
+      throw new Error('A user with this email already exists');
+    }
+    user.email = String(email).trim().toLowerCase();
+  }
+
+  if (name !== undefined) user.name = String(name).trim();
+  if (phone !== undefined) user.phone = String(phone).trim();
+  if (department !== undefined) user.department = String(department).trim();
+  if (jobTitle !== undefined) user.jobTitle = String(jobTitle).trim();
+  if (username !== undefined) user.username = String(username).trim();
+
+  const updated = await user.save();
+  const safeUser = await User.findById(updated._id).select('-password');
+  res.json({ success: true, message: 'Profile updated successfully', data: sanitizeUser(safeUser, req) });
+});
+
+const changeCurrentUserPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    res.status(400);
+    throw new Error('Current password, new password and confirm password are required');
+  }
+  if (newPassword !== confirmPassword) {
+    res.status(400);
+    throw new Error('New password and confirm password do not match');
+  }
+  const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!strongPassword.test(newPassword)) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters and include uppercase, lowercase and a number');
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const isCurrentValid = await user.matchPassword(currentPassword);
+  if (!isCurrentValid) {
+    res.status(400);
+    throw new Error('Current password is incorrect');
+  }
+
+  user.password = newPassword;
+  await user.save();
+  res.json({ success: true, message: 'Password updated successfully' });
+});
+
+const updateCurrentUserPreferences = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const nextNotificationPreferences = req.body.notificationPreferences || {};
+  const nextAppearancePreferences = req.body.appearancePreferences || {};
+  const requestedTheme = req.body.themePreference || nextAppearancePreferences.theme;
+
+  user.notificationPreferences = {
+    emailNotifications: nextNotificationPreferences.emailNotifications ?? user.notificationPreferences?.emailNotifications ?? true,
+    ticketAssignmentNotifications:
+      nextNotificationPreferences.ticketAssignmentNotifications ?? user.notificationPreferences?.ticketAssignmentNotifications ?? true,
+    ticketUpdates: nextNotificationPreferences.ticketUpdates ?? user.notificationPreferences?.ticketUpdates ?? true,
+    maintenanceAnnouncements:
+      nextNotificationPreferences.maintenanceAnnouncements ?? user.notificationPreferences?.maintenanceAnnouncements ?? true,
+    systemNotifications: nextNotificationPreferences.systemNotifications ?? user.notificationPreferences?.systemNotifications ?? true,
+  };
+
+  user.appearancePreferences = {
+    theme: ['light', 'dark', 'system'].includes(requestedTheme)
+      ? requestedTheme
+      : user.appearancePreferences?.theme || 'system',
+  };
+  user.themePreference = user.appearancePreferences.theme;
+
+  const updated = await user.save();
+  const safeUser = await User.findById(updated._id).select('-password');
+  res.json({
+    success: true,
+    message: 'Preferences updated successfully',
+    data: sanitizeUser(safeUser, req),
+  });
+});
+
+const uploadCurrentUserProfileImage = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error('Please upload an image file');
+  }
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  user.profileImage = `/uploads/avatars/${req.file.filename}`;
+  const updated = await user.save();
+  const safeUser = await User.findById(updated._id).select('-password');
+  res.status(201).json({
+    success: true,
+    message: 'Profile image uploaded successfully',
+    data: sanitizeUser(safeUser, req),
+  });
+});
+
+const logoutAllSessions = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  user.tokenVersion = Number(user.tokenVersion || 0) + 1;
+  await user.save({ validateBeforeSave: false });
+  res.json({
+    success: true,
+    message: 'All sessions have been logged out. Please sign in again.',
   });
 });
 
@@ -210,4 +387,10 @@ module.exports = {
   updateUser,
   deleteUser,
   getUserStats,
+  getCurrentUserProfile,
+  updateCurrentUserProfile,
+  changeCurrentUserPassword,
+  updateCurrentUserPreferences,
+  uploadCurrentUserProfileImage,
+  logoutAllSessions,
 };
