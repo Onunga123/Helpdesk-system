@@ -155,7 +155,11 @@ const CreateTicket = () => {
       }
 
       setSelectedFiles([]);
-      toast.success('Ticket submitted successfully!');
+      toast.success(
+        newTicket?.ticketNumber
+          ? `Ticket submitted successfully! Ticket number: ${newTicket.ticketNumber}`
+          : 'Ticket submitted successfully!'
+      );
       navigate(`/tickets/${newTicket._id}`);
     } catch (err) {
       const message = err?.response?.data?.message || 'Failed to submit ticket.';
