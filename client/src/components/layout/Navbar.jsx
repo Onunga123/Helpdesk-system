@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaBars, FaBell, FaUserCircle } from 'react-icons/fa';
+import { FaBars, FaUserCircle } from 'react-icons/fa';
 import './Layout.css';
 
 const Navbar = ({ onMenuClick, user }) => {
@@ -39,11 +39,6 @@ const Navbar = ({ onMenuClick, user }) => {
 
       {/* Right — user info */}
       <div className="navbar-right">
-        <button type="button" className="navbar-icon-btn" aria-label="View notifications">
-          <FaBell />
-          <span className="navbar-badge">3</span>
-        </button>
-
         <div className="navbar-user">
           <FaUserCircle className="navbar-user-icon" />
           <div className="navbar-user-info">
