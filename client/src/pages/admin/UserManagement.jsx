@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import API from '../../api/axios';
+import { validateInstitutionalEmail } from '../../utils/institutionalEmail';
 
 const initialCreateForm = {
   name: '',
@@ -195,11 +196,16 @@ const UserManagement = () => {
       setCreateError('Password and confirm password do not match.');
       return;
     }
+    const emailError = validateInstitutionalEmail(createForm.email);
+    if (emailError) {
+      setCreateError(emailError);
+      return;
+    }
     setCreateLoading(true);
     try {
       await API.post('/users', {
         name: createForm.name,
-        email: createForm.email,
+        email: createForm.email.trim(),
         role: createForm.role,
         department: createForm.department,
         phone: createForm.phone,
@@ -219,11 +225,16 @@ const UserManagement = () => {
     e.preventDefault();
     if (!selectedUser?._id) return;
     setEditError('');
+    const emailError = validateInstitutionalEmail(editForm.email);
+    if (emailError) {
+      setEditError(emailError);
+      return;
+    }
     setEditLoading(true);
     try {
       const payload = {
         name: editForm.name,
-        email: editForm.email,
+        email: editForm.email.trim(),
         role: editForm.role,
         department: editForm.department,
         phone: editForm.phone,

@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 const generateToken = require('../utils/generateToken');
+const { assertInstitutionalEmail } = require('../utils/institutionalEmail');
 
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, department, phone } = req.body;
@@ -10,7 +11,9 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('Please provide name, email and password');
   }
 
-  const userExists = await User.findOne({ email });
+  const normalizedEmail = assertInstitutionalEmail(email, res);
+
+  const userExists = await User.findOne({ email: normalizedEmail });
   if (userExists) {
     res.status(400);
     throw new Error('A user with this email already exists');
@@ -18,7 +21,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     name,
-    email,
+    email: normalizedEmail,
     password,
     role: role || 'student',
     department: department || '',
@@ -47,7 +50,9 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new Error('Please provide email and password');
   }
 
-  const user = await User.findOne({ email });
+  const normalizedEmail = assertInstitutionalEmail(email, res);
+
+  const user = await User.findOne({ email: normalizedEmail });
 
   if (!user || !(await user.matchPassword(password))) {
     res.status(401);

@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { loginUser } from '../../redux/slices/authSlice';
+import { validateInstitutionalEmail } from '../../utils/institutionalEmail';
 import './Auth.css';
 
 const Login = () => {
@@ -39,9 +40,18 @@ const Login = () => {
       return;
     }
 
+    const emailError = validateInstitutionalEmail(formData.email);
+    if (emailError) {
+      setStatus({ type: 'error', message: emailError });
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await dispatch(loginUser(formData)).unwrap();
+      await dispatch(loginUser({
+        email: formData.email.trim(),
+        password: formData.password,
+      })).unwrap();
       setStatus({ type: 'success', message: 'Login successful. Redirecting...' });
       navigate('/dashboard');
     } catch (error) {

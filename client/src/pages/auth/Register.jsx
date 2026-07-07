@@ -18,6 +18,7 @@ import {
   FaUserCog,
 } from 'react-icons/fa';
 import { registerUser } from '../../redux/slices/authSlice';
+import { validateInstitutionalEmail } from '../../utils/institutionalEmail';
 import './Auth.css';
 
 const Register = () => {
@@ -62,6 +63,12 @@ const Register = () => {
     }
     if (formData.password !== formData.confirmPassword) {
       setStatus({ type: 'error', message: 'Password and confirm password do not match.' });
+      return;
+    }
+
+    const emailError = validateInstitutionalEmail(formData.email);
+    if (emailError) {
+      setStatus({ type: 'error', message: emailError });
       return;
     }
 

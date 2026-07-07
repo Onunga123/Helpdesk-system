@@ -8,6 +8,7 @@ import { logout, setUser } from '../../redux/slices/authSlice';
 import { useTheme } from '../../context/ThemeContext';
 import { queryKeys } from '../../lib/queryClient';
 import { formatRole } from '../../utils/roles';
+import { validateInstitutionalEmail } from '../../utils/institutionalEmail';
 import PageLoader from '../../components/ui/PageLoader';
 import './AccountSettings.css';
 
@@ -144,9 +145,10 @@ const AccountSettings = () => {
   };
 
   const onSaveChanges = async () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!profileForm.name.trim()) return toast.error('Full name is required.');
-    if (!emailRegex.test(profileForm.email)) return toast.error('Please provide a valid email address.');
+
+    const emailError = validateInstitutionalEmail(profileForm.email);
+    if (emailError) return toast.error(emailError);
 
     setSaving(true);
     try {

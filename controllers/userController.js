@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
-// FIX 1: Removed unused generateToken import
+const { assertInstitutionalEmail } = require('../utils/institutionalEmail');
 
 const sanitizeUser = (user, req) => ({
   _id: user._id,
@@ -65,13 +65,15 @@ const createUser = asyncHandler(async (req, res) => {
     throw new Error('Please provide name, email and password');
   }
 
+  const normalizedEmail = assertInstitutionalEmail(email, res);
+
   const validRoles = ['student', 'staff', 'ict_officer', 'admin'];
   if (role && !validRoles.includes(role)) {
     res.status(400);
     throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
   }
 
-  const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ email: normalizedEmail });
   if (userExists) {
     res.status(400);
     throw new Error('A user with this email already exists');
@@ -79,7 +81,7 @@ const createUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     name,
-    email,
+    email: normalizedEmail,
     password,
     role: role || 'student',
     department: department || '',
@@ -124,12 +126,13 @@ const updateUser = asyncHandler(async (req, res) => {
   }
 
   if (req.body.email && req.body.email !== user.email) {
-    const emailExists = await User.findOne({ email: req.body.email });
+    const normalizedEmail = assertInstitutionalEmail(req.body.email, res);
+    const emailExists = await User.findOne({ email: normalizedEmail });
     if (emailExists) {
       res.status(400);
       throw new Error('A user with this email already exists');
     }
-    user.email = req.body.email;
+    user.email = normalizedEmail;
   }
 
   user.name = req.body.name || user.name;
@@ -185,12 +188,13 @@ const updateCurrentUserProfile = asyncHandler(async (req, res) => {
 
   const { name, email, phone, department, jobTitle, username } = req.body;
   if (email && email !== user.email) {
-    const exists = await User.findOne({ email, _id: { $ne: req.user._id } });
+    const normalizedEmail = assertInstitutionalEmail(email, res);
+    const exists = await User.findOne({ email: normalizedEmail, _id: { $ne: req.user._id } });
     if (exists) {
       res.status(400);
       throw new Error('A user with this email already exists');
     }
-    user.email = String(email).trim().toLowerCase();
+    user.email = normalizedEmail;
   }
 
   if (name !== undefined) user.name = String(name).trim();
