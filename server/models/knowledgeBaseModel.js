@@ -61,4 +61,6 @@ knowledgeBaseSchema.index({
   tags: 'text',
 });
 
+knowledgeBaseSchema.index({ status: 1, category: 1, views: -1, createdAt: -1 });
+
 module.exports = mongoose.model('KnowledgeBase', knowledgeBaseSchema);

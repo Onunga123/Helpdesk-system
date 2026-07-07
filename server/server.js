@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
@@ -11,10 +12,18 @@ dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 const app = express();
 
 // ─── MIDDLEWARE ──────────────────────────────────────────────
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+    etag: true,
+    lastModified: true,
+  })
+);
 
 // ─── ROUTES ──────────────────────────────────────────────────
 app.get('/', (req, res) => {

@@ -45,4 +45,9 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+ticketSchema.index({ createdBy: 1, status: 1, createdAt: -1 });
+ticketSchema.index({ assignedTo: 1, status: 1, createdAt: -1 });
+ticketSchema.index({ status: 1, priority: 1, createdAt: -1 });
+ticketSchema.index({ category: 1, status: 1 });
+
 module.exports = mongoose.model('Ticket', ticketSchema);

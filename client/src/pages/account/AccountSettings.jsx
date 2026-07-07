@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff, FiRefreshCw, FiShield, FiUser } from 'react-icons/fi';
 import API from '../../api/axios';
 import { logout, setUser } from '../../redux/slices/authSlice';
 import { useTheme } from '../../context/ThemeContext';
+import { queryKeys } from '../../lib/queryClient';
 import { formatRole } from '../../utils/roles';
+import PageLoader from '../../components/ui/PageLoader';
 import './AccountSettings.css';
 
 const defaultPreferences = {
@@ -57,9 +60,9 @@ const getPasswordStrength = (password) => {
 
 const AccountSettings = () => {
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
   const { user } = useSelector((state) => state.auth);
   const { themePreference, setTheme } = useTheme();
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -79,33 +82,41 @@ const AccountSettings = () => {
     confirm: false,
   });
 
-  const loadProfile = async () => {
-    setLoading(true);
-    try {
+  const {
+    data: fetchedProfile,
+    isLoading: loading,
+    isError,
+    error,
+    refetch: loadProfile,
+  } = useQuery({
+    queryKey: queryKeys.userProfile,
+    queryFn: async () => {
       const { data } = await API.get('/users/me');
-      const payload = data?.data || defaultProfile;
-      setProfile(payload);
-      setProfileForm({
-        ...defaultProfile,
-        ...payload,
-      });
-      setPreferences({
-        ...defaultPreferences,
-        ...(payload.notificationPreferences || {}),
-      });
-      const savedTheme = payload.themePreference || payload.appearancePreferences?.theme || 'system';
-      setThemeState(savedTheme);
-      setTheme(savedTheme);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Unable to load account settings.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data?.data || defaultProfile;
+    },
+    staleTime: 5 * 60_000,
+  });
 
   useEffect(() => {
-    loadProfile();
-  }, []);
+    if (!fetchedProfile) return;
+    setProfile(fetchedProfile);
+    setProfileForm({
+      ...defaultProfile,
+      ...fetchedProfile,
+    });
+    setPreferences({
+      ...defaultPreferences,
+      ...(fetchedProfile.notificationPreferences || {}),
+    });
+    const savedTheme = fetchedProfile.themePreference || fetchedProfile.appearancePreferences?.theme || 'system';
+    setThemeState(savedTheme);
+    setTheme(savedTheme);
+  }, [fetchedProfile, setTheme]);
+
+  useEffect(() => {
+    if (!isError) return;
+    toast.error(error?.response?.data?.message || 'Unable to load account settings.');
+  }, [isError, error]);
 
   const passwordStrength = useMemo(
     () => getPasswordStrength(passwordForm.newPassword || ''),
@@ -156,6 +167,7 @@ const AccountSettings = () => {
       setProfile(nextProfile);
       setProfileForm((prev) => ({ ...prev, ...nextProfile }));
       syncAuthUser(nextProfile);
+      queryClient.setQueryData(queryKeys.userProfile, nextProfile);
       toast.success('Account settings updated successfully.');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to update account settings.');
@@ -218,6 +230,7 @@ const AccountSettings = () => {
       setProfile(nextProfile);
       setProfileForm((prev) => ({ ...prev, profileImage: nextProfile.profileImage || '' }));
       syncAuthUser(nextProfile);
+      queryClient.setQueryData(queryKeys.userProfile, nextProfile);
       toast.success('Profile image updated.');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to upload profile image.');
@@ -243,8 +256,8 @@ const AccountSettings = () => {
 
   if (loading) {
     return (
-      <div className="spinner-wrap" role="status" aria-live="polite">
-        <div className="spinner" />
+      <div className="um-page" aria-label="Manage account settings">
+        <PageLoader label="Loading account settings..." />
       </div>
     );
   }
@@ -295,7 +308,7 @@ const AccountSettings = () => {
           <div className="account-profile-top">
             <div className="account-avatar">
               {profileForm.profileImage ? (
-                <img src={profileForm.profileImage} alt="Profile" />
+                <img src={profileForm.profileImage} alt="Profile" loading="lazy" decoding="async" />
               ) : (
                 <span>{profileForm.name?.charAt(0)?.toUpperCase() || 'U'}</span>
               )}

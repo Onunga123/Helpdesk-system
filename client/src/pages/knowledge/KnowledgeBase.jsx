@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   FaPlus,
@@ -15,6 +16,8 @@ import {
 import toast from 'react-hot-toast';
 
 import API from '../../api/axios';
+import { queryKeys } from '../../lib/queryClient';
+import PageLoader from '../../components/ui/PageLoader';
 import '../dashboard/Dashboard.css';
 
 const CATEGORY_TABS = [
@@ -68,20 +71,58 @@ const normalizeTags = (input) =>
     .filter(Boolean);
 
 const KnowledgeBase = () => {
+  const queryClient = useQueryClient();
   const { user } = useSelector((state) => state.auth);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const isPrivileged = user?.role === 'admin' || user?.role === 'ict_officer';
   const isAdmin = user?.role === 'admin';
 
-  const [baseLoading, setBaseLoading] = useState(true);
-  const [articles, setArticles] = useState([]);
-  const [allArticles, setAllArticles] = useState([]);
-  const [stats, setStats] = useState(null);
-
-  const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState(searchParams.get('q') || '');
   const activeCategory = searchParams.get('category') || 'All';
+  const q = searchParams.get('q') || '';
+
+  const {
+    data: allArticles = [],
+    isLoading: baseLoading,
+  } = useQuery({
+    queryKey: queryKeys.knowledgeArticles({ scope: 'all' }),
+    queryFn: async () => {
+      const { data } = await API.get('/knowledge');
+      return Array.isArray(data?.data) ? data.data : [];
+    },
+    staleTime: 2 * 60_000,
+  });
+
+  const { data: stats = null } = useQuery({
+    queryKey: queryKeys.knowledgeStats,
+    queryFn: async () => {
+      const { data } = await API.get('/knowledge/stats');
+      return data?.data || null;
+    },
+    enabled: isPrivileged,
+    staleTime: 2 * 60_000,
+  });
+
+  const { data: searchResults = [], isFetching: searchLoading } = useQuery({
+    queryKey: queryKeys.knowledgeArticles({ search: q }),
+    queryFn: async () => {
+      const { data } = await API.get('/knowledge/search', { params: { q } });
+      return Array.isArray(data?.data) ? data.data : [];
+    },
+    enabled: Boolean(q),
+    staleTime: 60_000,
+  });
+
+  const articles = useMemo(() => {
+    if (q) return searchResults;
+    if (activeCategory === 'All') return allArticles;
+    return allArticles.filter((article) => article.category === activeCategory);
+  }, [q, searchResults, allArticles, activeCategory]);
+
+  const refreshAll = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['knowledge'] });
+  };
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
@@ -98,62 +139,6 @@ const KnowledgeBase = () => {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
-  const q = searchParams.get('q') || '';
-
-  const fetchArticles = async (params = {}) => {
-    const hasSearch = !!params.q;
-    if (hasSearch) setSearchLoading(true);
-    else setBaseLoading(true);
-
-    try {
-      const endpoint = hasSearch ? '/knowledge/search' : '/knowledge';
-      const { data } = await API.get(endpoint, { params });
-      setArticles(Array.isArray(data?.data) ? data.data : []);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to load articles.');
-      setArticles([]);
-    } finally {
-      if (hasSearch) setSearchLoading(false);
-      else setBaseLoading(false);
-    }
-  };
-
-  const refreshAll = async () => {
-    try {
-      const [allRes, statsRes] = await Promise.all([
-        API.get('/knowledge'),
-        isPrivileged ? API.get('/knowledge/stats') : Promise.resolve(null),
-      ]);
-
-      const all = Array.isArray(allRes?.data?.data) ? allRes.data.data : [];
-      setAllArticles(all);
-      setStats(statsRes?.data?.data || null);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to refresh knowledge data.');
-    }
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      await refreshAll();
-    };
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPrivileged]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      const category = searchParams.get('category');
-      const query = searchParams.get('q');
-      const params = {};
-      if (query) params.q = query;
-      if (category && category !== 'All' && !query) params.category = category;
-      fetchArticles(params);
-    }, 280);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.toString()]);
 
   const categoryCounts = useMemo(() => {
     const counts = Object.fromEntries(CATEGORY_TABS.map((c) => [c, 0]));
@@ -232,10 +217,6 @@ const KnowledgeBase = () => {
       }
       setShowFormModal(false);
       await refreshAll();
-      const params = {};
-      if (q) params.q = q;
-      if (activeCategory !== 'All' && !q) params.category = activeCategory;
-      await fetchArticles(params);
     } catch (err) {
       const message = err?.response?.data?.message || 'Failed to save article.';
       setFormError(message);
@@ -253,10 +234,6 @@ const KnowledgeBase = () => {
       toast.success('Article deleted');
       setDeleteTarget(null);
       await refreshAll();
-      const params = {};
-      if (q) params.q = q;
-      if (activeCategory !== 'All' && !q) params.category = activeCategory;
-      await fetchArticles(params);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to delete article.');
     } finally {
@@ -290,6 +267,14 @@ const KnowledgeBase = () => {
   };
 
   const loading = baseLoading || searchLoading;
+
+  if (baseLoading && !allArticles.length) {
+    return (
+      <section aria-label="Knowledge base">
+        <PageLoader label="Loading knowledge base..." />
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Administrator dashboard">

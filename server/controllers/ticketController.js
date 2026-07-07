@@ -40,18 +40,44 @@ const getTickets = asyncHandler(async (req, res) => {
   if (req.query.priority) query.priority = req.query.priority;
   if (req.query.category) query.category = req.query.category;
 
-  const tickets = await Ticket.find(query)
+  const page = Math.max(parseInt(req.query.page, 10) || 0, 0);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 0, 0), 200);
+  const usePagination = page > 0 && limit > 0;
+
+  const baseQuery = Ticket.find(query)
+    .select('-comments')
     .populate('createdBy', 'name email department role')
     .populate('assignedTo', 'name email role')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
 
-  const normalizedTickets = tickets.map((ticket) => {
-    const row = ticket.toObject();
-    row.submittedBy = row.createdBy || null;
-    return row;
+  let tickets;
+  let total;
+
+  if (usePagination) {
+    const skip = (page - 1) * limit;
+    [tickets, total] = await Promise.all([
+      baseQuery.clone().skip(skip).limit(limit),
+      Ticket.countDocuments(query),
+    ]);
+  } else {
+    tickets = await baseQuery;
+    total = tickets.length;
+  }
+
+  const normalizedTickets = tickets.map((row) => ({
+    ...row,
+    submittedBy: row.createdBy || null,
+  }));
+
+  res.json({
+    success: true,
+    count: normalizedTickets.length,
+    total,
+    page: usePagination ? page : 1,
+    pages: usePagination ? Math.ceil(total / limit) : 1,
+    data: normalizedTickets,
   });
-
-  res.json({ success: true, data: normalizedTickets });
 });
 
 const getTicketById = asyncHandler(async (req, res) => {

@@ -15,6 +15,7 @@ import {
   FiUserCheck,
 } from 'react-icons/fi';
 import API from '../../api/axios';
+import PageLoader from '../../components/ui/PageLoader';
 import './Dashboard.css';
 
 const statusBadgeClass = {
@@ -164,9 +165,7 @@ const ICTDashboard = () => {
   if (loading) {
     return (
       <section className="dashboard" aria-label="ICT officer dashboard">
-        <div className="spinner-wrap" role="status" aria-live="polite" aria-label="Loading ICT officer dashboard">
-          <div className="spinner" />
-        </div>
+        <PageLoader label="Loading ICT officer dashboard..." />
       </section>
     );
   }
