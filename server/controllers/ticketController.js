@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const Ticket = require('../models/ticketModel');
+const { generateTicketNumber } = require('../utils/generateTicketNumber');
 
 const createTicket = asyncHandler(async (req, res) => {
   const { title, description, category, priority } = req.body;
@@ -9,7 +10,10 @@ const createTicket = asyncHandler(async (req, res) => {
     throw new Error('Title and description are required');
   }
 
+  const ticketNumber = await generateTicketNumber();
+
   const ticket = await Ticket.create({
+    ticketNumber,
     title,
     description,
     category: category || 'Other',
@@ -99,6 +103,11 @@ const updateTicket = asyncHandler(async (req, res) => {
   const fields = ['title', 'description', 'category', 'priority', 'status', 'assignedTo'];
   for (const key of fields) {
     if (req.body[key] !== undefined) ticket[key] = req.body[key];
+  }
+
+  if (req.body.ticketNumber !== undefined && req.body.ticketNumber !== ticket.ticketNumber) {
+    res.status(400);
+    throw new Error('Ticket number cannot be changed');
   }
 
   const updated = await ticket.save();

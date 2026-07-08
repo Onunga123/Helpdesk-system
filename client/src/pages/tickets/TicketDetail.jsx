@@ -22,7 +22,12 @@ import {
   FiX,
 } from 'react-icons/fi';
 import API from '../../api/axios';
-import API_URL from '../../config/api';
+import {
+  getAttachmentName,
+  getAttachmentPath,
+  isImageAttachment,
+  resolveMediaUrl,
+} from '../../utils/mediaUrl';
 
 const statusBadgeClass = (status) => {
   if (status === 'Open') return 'badge-open';
@@ -277,8 +282,6 @@ const TicketDetail = () => {
     }
   };
 
-  const attachmentDownloadBase = useMemo(() => API_URL, []);
-
   const onDeleteAttachment = async (attachmentId) => {
     if (!attachmentId) return;
     setUploadLoading(true);
@@ -397,7 +400,9 @@ const TicketDetail = () => {
               {(ticket?.attachments || []).length ? (
                 <div style={{ display: 'grid', gap: 10 }}>
                   {(ticket?.attachments || []).map((att) => {
-                    const iconKind = getFileIcon(att.fileName || '');
+                    const fileName = getAttachmentName(att);
+                    const fileUrl = resolveMediaUrl(getAttachmentPath(att));
+                    const iconKind = getFileIcon(fileName);
                     const icon =
                       iconKind === 'image' ? <FiImage /> :
                       iconKind === 'pdf' ? <FiFileText /> :
@@ -406,18 +411,48 @@ const TicketDetail = () => {
                       iconKind === 'text' ? <FiFileText /> :
                       <FiFile />;
                     return (
-                      <div key={att._id || att.filePath} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <a
-                          href={`${attachmentDownloadBase}${att.filePath}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-secondary"
-                          style={{ textDecoration: 'none', flex: 1, justifyContent: 'flex-start' }}
-                        >
-                          <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-                            {icon} <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.fileName}</span>
-                          </span>
-                        </a>
+                      <div key={att._id || fileUrl || fileName} style={{ display: 'grid', gap: 8 }}>
+                        {fileUrl && isImageAttachment(fileName) ? (
+                          <a href={fileUrl} target="_blank" rel="noreferrer" aria-label={`View ${fileName}`}>
+                            <img
+                              src={fileUrl}
+                              alt={fileName}
+                              loading="lazy"
+                              decoding="async"
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: 220,
+                                borderRadius: 8,
+                                border: '1px solid var(--border)',
+                                objectFit: 'contain',
+                              }}
+                            />
+                          </a>
+                        ) : null}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          {fileUrl ? (
+                            <a
+                              href={fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn btn-secondary"
+                              style={{ textDecoration: 'none', flex: 1, justifyContent: 'flex-start' }}
+                            >
+                              <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                                {icon}{' '}
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {fileName}
+                                </span>
+                              </span>
+                            </a>
+                          ) : (
+                            <span className="btn btn-secondary" style={{ flex: 1, justifyContent: 'flex-start', opacity: 0.7 }}>
+                              <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                                {icon}{' '}
+                                <span>{fileName} (unavailable)</span>
+                              </span>
+                            </span>
+                          )}
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                           {att.uploadedAt ? new Date(att.uploadedAt).toLocaleDateString() : '-'}
                         </div>
@@ -431,6 +466,7 @@ const TicketDetail = () => {
                             <FiTrash2 />
                           </button>
                         )}
+                        </div>
                       </div>
                     );
                   })}

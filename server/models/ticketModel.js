@@ -10,6 +10,13 @@ const commentSchema = new mongoose.Schema(
 
 const ticketSchema = new mongoose.Schema(
   {
+    ticketNumber: {
+      type: String,
+      required: [true, 'Ticket number is required'],
+      unique: true,
+      trim: true,
+      index: true,
+    },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     category: {

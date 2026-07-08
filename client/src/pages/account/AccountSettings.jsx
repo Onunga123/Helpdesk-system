@@ -9,6 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { queryKeys } from '../../lib/queryClient';
 import { formatRole } from '../../utils/roles';
 import { validateInstitutionalEmail } from '../../utils/institutionalEmail';
+import { resolveMediaUrl } from '../../utils/mediaUrl';
 import PageLoader from '../../components/ui/PageLoader';
 import './AccountSettings.css';
 
@@ -309,8 +310,13 @@ const AccountSettings = () => {
         <div className="card-body">
           <div className="account-profile-top">
             <div className="account-avatar">
-              {profileForm.profileImage ? (
-                <img src={profileForm.profileImage} alt="Profile" loading="lazy" decoding="async" />
+              {resolveMediaUrl(profileForm.profileImage) ? (
+                <img
+                  src={resolveMediaUrl(profileForm.profileImage)}
+                  alt="Profile"
+                  loading="lazy"
+                  decoding="async"
+                />
               ) : (
                 <span>{profileForm.name?.charAt(0)?.toUpperCase() || 'U'}</span>
               )}

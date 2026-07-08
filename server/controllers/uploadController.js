@@ -44,12 +44,15 @@ const uploadTicketAttachments = asyncHandler(async (req, res) => {
   }
 
   // Build attachment objects from uploaded files
-  const attachments = req.files.map((file) => ({
-    filename: file.originalname,
-    // Store the URL path so frontend can fetch the file
-    path: `/uploads/tickets/${file.filename}`,
-    uploadedBy: req.user._id,
-  }));
+  const attachments = req.files.map((file) => {
+    const filePath = `/uploads/tickets/${file.filename}`;
+    return {
+      filename: file.originalname,
+      path: filePath,
+      fileUrl: filePath,
+      uploadedBy: req.user._id,
+    };
+  });
 
   // Add attachments to the ticket
   ticket.attachments.push(...attachments);

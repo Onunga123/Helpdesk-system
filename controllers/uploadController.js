@@ -35,11 +35,15 @@ const uploadTicketAttachments = asyncHandler(async (req, res) => {
     throw new Error('No files were uploaded. Please select at least one file.');
   }
 
-  const attachments = req.files.map((file) => ({
-    filename: file.originalname,
-    path: `/uploads/tickets/${file.filename}`,
-    uploadedBy: req.user._id,
-  }));
+  const attachments = req.files.map((file) => {
+    const filePath = `/uploads/tickets/${file.filename}`;
+    return {
+      filename: file.originalname,
+      path: filePath,
+      fileUrl: filePath,
+      uploadedBy: req.user._id,
+    };
+  });
 
   ticket.attachments.push(...attachments);
   await ticket.save();
