@@ -51,6 +51,8 @@ app.use('/api/assets', require('./routes/assetRoutes'));
 // Reports routes
 app.use('/api/reports', require('./routes/reportRoutes'));
 
+app.use("/api/notifications", require("./routes/notificationRoutes"));
+
 // Upload routes
 app.use('/api/upload', require('./routes/uploadRoutes'));
 
