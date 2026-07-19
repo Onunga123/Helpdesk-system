@@ -1,4 +1,4 @@
-require('./config/loadEnv')();
+﻿require('./config/loadEnv')();
 
 const express = require('express');
 const cors = require('cors');
@@ -51,13 +51,11 @@ app.use('/api/assets', require('./routes/assetRoutes'));
 // Reports routes
 app.use('/api/reports', require('./routes/reportRoutes'));
 
-app.use("/api/notifications", require("./routes/notificationRoutes"));
+// Notifications routes
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // Upload routes
 app.use('/api/upload', require('./routes/uploadRoutes'));
-
-// In-app notification routes
-app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // ─── ERROR HANDLER ───────────────────────────────────────────
 app.use(errorHandler);
