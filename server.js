@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
+const { logEmailConfigStatus } = require('./utils/sendEmail');
 
 console.log('SERVER STARTED FROM:', __dirname);
 console.log('ROUTES FOLDER:', require('fs').readdirSync(__dirname + '/routes'));
@@ -71,6 +72,7 @@ const PORT = process.env.PORT || 5000;
 
 async function start() {
   try {
+    logEmailConfigStatus();
     await connectDB();
     app.listen(PORT, () => {
       console.log(

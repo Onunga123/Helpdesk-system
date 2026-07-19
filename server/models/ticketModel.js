@@ -40,6 +40,7 @@ const ticketSchema = new mongoose.Schema(
       enum: ['Open', 'In Progress', 'Resolved', 'Closed'],
       default: 'Open',
     },
+    resolutionNote: { type: String, default: '', trim: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     comments: [commentSchema],

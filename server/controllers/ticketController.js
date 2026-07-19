@@ -2,6 +2,19 @@ const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const Ticket = require('../models/ticketModel');
 const { generateTicketNumber } = require('../utils/generateTicketNumber');
+const {
+  notifyTicketCreated,
+  notifyTicketStatusUpdated,
+  notifyTicketAssigned,
+  notifyCommentParticipants,
+  queueNotification,
+} = require('../utils/notificationService');
+const {
+  notifyTicketCreatedInApp,
+  notifyTicketStatusInApp,
+  notifyTicketAssignedInApp,
+  notifyCommentInApp,
+} = require('../utils/inAppNotificationService');
 
 const createTicket = asyncHandler(async (req, res) => {
   const { title, description, category, priority } = req.body;
@@ -19,6 +32,13 @@ const createTicket = asyncHandler(async (req, res) => {
     category: category || 'Other',
     priority: priority || 'Medium',
     createdBy: req.user._id,
+  });
+
+  console.log('About to send email notification for ticket:', ticket.ticketNumber);
+
+  queueNotification(async () => {
+    await notifyTicketCreated(ticket, req.user);
+    await notifyTicketCreatedInApp(ticket, req.user);
   });
 
   res.status(201).json({ success: true, data: ticket });
@@ -100,7 +120,18 @@ const updateTicket = asyncHandler(async (req, res) => {
     throw new Error('Ticket not found');
   }
 
-  const fields = ['title', 'description', 'category', 'priority', 'status', 'assignedTo'];
+  const oldStatus = ticket.status;
+  const oldAssignedTo = ticket.assignedTo ? ticket.assignedTo.toString() : null;
+
+  const fields = [
+    'title',
+    'description',
+    'category',
+    'priority',
+    'status',
+    'assignedTo',
+    'resolutionNote',
+  ];
   for (const key of fields) {
     if (req.body[key] !== undefined) ticket[key] = req.body[key];
   }
@@ -111,6 +142,35 @@ const updateTicket = asyncHandler(async (req, res) => {
   }
 
   const updated = await ticket.save();
+
+  const statusChanged = oldStatus !== updated.status;
+  const newAssignedTo = updated.assignedTo ? updated.assignedTo.toString() : null;
+  const assignedChanged = oldAssignedTo !== newAssignedTo;
+
+  queueNotification(async () => {
+    const User = require('../models/userModel');
+
+    if (statusChanged) {
+      const owner = await User.findById(updated.createdBy);
+      if (owner) {
+        await notifyTicketStatusUpdated(updated, owner, {
+          updatedBy: req.user,
+          resolutionNote: req.body.resolutionNote,
+        });
+        await notifyTicketStatusInApp(updated, owner._id);
+      }
+    }
+
+    if (assignedChanged && updated.assignedTo) {
+      const officer = await User.findById(updated.assignedTo);
+      const owner = await User.findById(updated.createdBy);
+      if (officer && owner) {
+        await notifyTicketAssigned(updated, officer, owner);
+        await notifyTicketAssignedInApp(updated, officer._id);
+      }
+    }
+  });
+
   res.json({ success: true, data: updated });
 });
 
@@ -127,6 +187,21 @@ const addComment = asyncHandler(async (req, res) => {
 
   ticket.comments.push({ user: req.user._id, message: req.body.message });
   await ticket.save();
+
+  queueNotification(async () => {
+    const User = require('../models/userModel');
+    const recipientIds = new Set();
+    if (ticket.createdBy) recipientIds.add(ticket.createdBy.toString());
+    if (ticket.assignedTo) recipientIds.add(ticket.assignedTo.toString());
+    recipientIds.delete(req.user._id.toString());
+
+    await notifyCommentParticipants(ticket, req.body.message, req.user);
+
+    for (const userId of recipientIds) {
+      await notifyCommentInApp(ticket, userId, req.user.name);
+    }
+  });
+
   res.json({ success: true, data: ticket });
 });
 

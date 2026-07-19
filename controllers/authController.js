@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 const generateToken = require('../utils/generateToken');
 const { assertInstitutionalEmail } = require('../utils/institutionalEmail');
+const { notifyWelcomeRegistration, queueNotification } = require('../utils/notificationService');
 
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, department, phone } = req.body;
@@ -27,6 +28,8 @@ const registerUser = asyncHandler(async (req, res) => {
     department: department || '',
     phone: phone || '',
   });
+
+  queueNotification(() => notifyWelcomeRegistration(user));
 
   res.status(201).json({
     success: true,

@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 const { assertInstitutionalEmail } = require('../utils/institutionalEmail');
+const { notifyAccountCreated, queueNotification } = require('../utils/notificationService');
 
 const sanitizeUser = (user, req) => ({
   _id: user._id,
@@ -90,6 +91,8 @@ const createUser = asyncHandler(async (req, res) => {
     jobTitle: jobTitle || '',
     username: username || email.split('@')[0],
   });
+
+  queueNotification(() => notifyAccountCreated(user, req.user));
 
   res.status(201).json({
     success: true,

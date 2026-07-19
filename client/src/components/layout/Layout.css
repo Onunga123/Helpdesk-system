@@ -314,6 +314,130 @@ html.dark {
   font-weight: 700;
 }
 
+.notification-bell-wrap {
+  position: relative;
+}
+
+.notification-bell-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--layout-border);
+  border-radius: 999px;
+  background: var(--layout-surface);
+  color: var(--layout-text);
+  cursor: pointer;
+}
+
+.notification-bell-btn svg {
+  font-size: 1.15rem;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, 92vw);
+  max-height: 420px;
+  overflow: auto;
+  background: var(--layout-surface);
+  border: 1px solid var(--layout-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
+  z-index: 1200;
+}
+
+.notification-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--layout-border);
+}
+
+.notification-mark-all {
+  border: none;
+  background: transparent;
+  color: var(--layout-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notification-empty {
+  margin: 0;
+  padding: 1rem;
+  color: var(--layout-muted);
+  font-size: 0.86rem;
+}
+
+.notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notification-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--layout-border);
+}
+
+.notification-item.unread {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.notification-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.notification-message {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: var(--layout-muted);
+}
+
+.notification-time {
+  font-size: 0.72rem;
+  color: var(--layout-muted);
+}
+
+.notification-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.notification-item-actions button,
+.notification-view-link {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--layout-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
 .layout-content {
   flex: 1;
   padding: 1rem 1.2rem 1.3rem;

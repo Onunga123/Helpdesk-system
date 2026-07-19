@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 const generateToken = require('../utils/generateToken');
 const { assertInstitutionalEmail } = require('../utils/institutionalEmail');
+const { notifyWelcomeRegistration, queueNotification } = require('../utils/notificationService');
 
 // ─────────────────────────────────────────────────────────────
 // @desc    Register a new user
@@ -39,6 +40,8 @@ const user = await User.create({
     department: department || '',
     phone: phone || '',
   });
+
+  queueNotification(() => notifyWelcomeRegistration(user));
 
   if (user) {
     res.status(201).json({

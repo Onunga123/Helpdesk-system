@@ -2,6 +2,13 @@ const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const Ticket = require('../models/ticketModel');
 const { generateTicketNumber } = require('../utils/generateTicketNumber');
+const {
+  notifyTicketCreated,
+  notifyTicketStatusUpdated,
+  notifyTicketAssigned,
+  notifyCommentParticipants,
+  queueNotification,
+} = require('../utils/notificationService');
 
 const createTicket = asyncHandler(async (req, res) => {
   const { title, description, category, priority } = req.body;
@@ -20,6 +27,8 @@ const createTicket = asyncHandler(async (req, res) => {
     priority: priority || 'Medium',
     createdBy: req.user._id,
   });
+
+  queueNotification(() => notifyTicketCreated(ticket, req.user));
 
   res.status(201).json({ success: true, data: ticket });
 });
@@ -44,18 +53,44 @@ const getTickets = asyncHandler(async (req, res) => {
   if (req.query.priority) query.priority = req.query.priority;
   if (req.query.category) query.category = req.query.category;
 
-  const tickets = await Ticket.find(query)
+  const page = Math.max(parseInt(req.query.page, 10) || 0, 0);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 0, 0), 200);
+  const usePagination = page > 0 && limit > 0;
+
+  const baseQuery = Ticket.find(query)
+    .select('-comments')
     .populate('createdBy', 'name email department role')
     .populate('assignedTo', 'name email role')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
 
-  const normalizedTickets = tickets.map((ticket) => {
-    const row = ticket.toObject();
-    row.submittedBy = row.createdBy || null;
-    return row;
+  let tickets;
+  let total;
+
+  if (usePagination) {
+    const skip = (page - 1) * limit;
+    [tickets, total] = await Promise.all([
+      baseQuery.clone().skip(skip).limit(limit),
+      Ticket.countDocuments(query),
+    ]);
+  } else {
+    tickets = await baseQuery;
+    total = tickets.length;
+  }
+
+  const normalizedTickets = tickets.map((row) => ({
+    ...row,
+    submittedBy: row.createdBy || null,
+  }));
+
+  res.json({
+    success: true,
+    count: normalizedTickets.length,
+    total,
+    page: usePagination ? page : 1,
+    pages: usePagination ? Math.ceil(total / limit) : 1,
+    data: normalizedTickets,
   });
-
-  res.json({ success: true, data: normalizedTickets });
 });
 
 const getTicketById = asyncHandler(async (req, res) => {
@@ -74,7 +109,18 @@ const updateTicket = asyncHandler(async (req, res) => {
     throw new Error('Ticket not found');
   }
 
-  const fields = ['title', 'description', 'category', 'priority', 'status', 'assignedTo'];
+  const oldStatus = ticket.status;
+  const oldAssignedTo = ticket.assignedTo ? ticket.assignedTo.toString() : null;
+
+  const fields = [
+    'title',
+    'description',
+    'category',
+    'priority',
+    'status',
+    'assignedTo',
+    'resolutionNote',
+  ];
   for (const key of fields) {
     if (req.body[key] !== undefined) ticket[key] = req.body[key];
   }
@@ -85,6 +131,31 @@ const updateTicket = asyncHandler(async (req, res) => {
   }
 
   const updated = await ticket.save();
+
+  const statusChanged = oldStatus !== updated.status;
+  const newAssignedTo = updated.assignedTo ? updated.assignedTo.toString() : null;
+  const assignedChanged = oldAssignedTo !== newAssignedTo;
+
+  queueNotification(async () => {
+    const User = require('../models/userModel');
+
+    if (statusChanged) {
+      const owner = await User.findById(updated.createdBy);
+      if (owner) {
+        await notifyTicketStatusUpdated(updated, owner, {
+          updatedBy: req.user,
+          resolutionNote: req.body.resolutionNote,
+        });
+      }
+    }
+
+    if (assignedChanged && updated.assignedTo) {
+      const officer = await User.findById(updated.assignedTo);
+      const owner = await User.findById(updated.createdBy);
+      if (officer && owner) await notifyTicketAssigned(updated, officer, owner);
+    }
+  });
+
   res.json({ success: true, data: updated });
 });
 
@@ -101,6 +172,9 @@ const addComment = asyncHandler(async (req, res) => {
 
   ticket.comments.push({ user: req.user._id, message: req.body.message });
   await ticket.save();
+
+  queueNotification(() => notifyCommentParticipants(ticket, req.body.message, req.user));
+
   res.json({ success: true, data: ticket });
 });
 

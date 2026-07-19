@@ -164,6 +164,7 @@ const CreateTicket = () => {
     } catch (err) {
       const message = err?.response?.data?.message || 'Failed to submit ticket.';
       setFormError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }

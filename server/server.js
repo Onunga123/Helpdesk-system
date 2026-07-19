@@ -1,13 +1,12 @@
+require('./config/loadEnv')();
+
 const express = require('express');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const compression = require('compression');
 const path = require('path');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
-
-// Force .env to always override any shell environment variables
-dotenv.config({ path: path.join(__dirname, '.env'), override: true });
+const { logEmailConfigStatus, verifyEmailTransport } = require('./utils/sendEmail');
 
 const app = express();
 
@@ -55,6 +54,9 @@ app.use('/api/reports', require('./routes/reportRoutes'));
 // Upload routes
 app.use('/api/upload', require('./routes/uploadRoutes'));
 
+// In-app notification routes
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+
 // ─── ERROR HANDLER ───────────────────────────────────────────
 app.use(errorHandler);
 
@@ -63,6 +65,8 @@ const PORT = process.env.PORT || 5000;
 
 async function start() {
   try {
+    logEmailConfigStatus();
+    await verifyEmailTransport();
     await connectDB();
     const server = app.listen(PORT, () => {
       console.log(
