@@ -166,11 +166,74 @@ const notifyWelcomeRegistration = async (user) => {
   });
 };
 
+const emailStaffUsers = async (staffUsers, subject, templateFactory) => {
+  const results = await Promise.allSettled(
+    staffUsers.map(async (staff) => {
+      if (!canEmailUser(staff, 'update')) return;
+      const result = await dispatchEmail({
+        to: staff.email,
+        subject,
+        template: templateFactory(staff),
+      });
+      if (result?.success) {
+        console.log(`[Email] Sent to ${staff.role} ${staff.email}`);
+      } else {
+        console.error(`[Email] Failed for ${staff.email}: ${result?.error || 'unknown'}`);
+      }
+    })
+  );
+  return results;
+};
+
+const notifyStaffNewTicket = async (ticket, submitter) => {
+  const { getAdminAndOfficerUsers } = require('../services/notificationService');
+  const staff = await getAdminAndOfficerUsers();
+  if (!staff.length) return;
+
+  await emailStaffUsers(
+    staff,
+    `New ICT Help Desk Ticket Submitted: ${ticket.ticketNumber}`,
+    (staffMember) =>
+      newTicketStaffTemplate({
+        ticketNumber: ticket.ticketNumber,
+        title: ticket.title,
+        category: ticket.category,
+        priority: ticket.priority,
+        submittedBy: submitter.name,
+        department: submitter.department,
+        ticketId: ticket._id,
+        officerName: staffMember.name,
+      })
+  );
+};
+
+const notifyStaffTicketResolved = async (ticket, owner) => {
+  const { getAdminAndOfficerUsers } = require('../services/notificationService');
+  const staff = await getAdminAndOfficerUsers();
+  if (!staff.length) return;
+
+  await emailStaffUsers(
+    staff,
+    `Ticket Resolved: ${ticket.ticketNumber}`,
+    (staffMember) =>
+      ticketStatusUpdatedTemplate({
+        name: staffMember.name,
+        ticketNumber: ticket.ticketNumber,
+        title: ticket.title,
+        status: 'Resolved',
+        resolutionNote: ticket.resolutionNote,
+        updatedBy: 'ICT Support Team',
+        updatedAt: new Date(),
+        ticketId: ticket._id,
+      })
+  );
+};
+
 /** Fire-and-forget wrapper — never blocks or throws to callers. */
 const queueNotification = (promiseFactory) => {
   Promise.resolve()
     .then(promiseFactory)
-    .catch((err) => console.error('[Email] Notification error:', err.message));
+    .catch((err) => console.error('[Notification] Async error:', err.message));
 };
 
 module.exports = {
@@ -181,5 +244,7 @@ module.exports = {
   notifyCommentParticipants,
   notifyAccountCreated,
   notifyWelcomeRegistration,
+  notifyStaffNewTicket,
+  notifyStaffTicketResolved,
   queueNotification,
 };

@@ -1,5 +1,6 @@
+require('./config/loadEnv')();
+
 const express = require('express');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
@@ -8,9 +9,6 @@ const { logEmailConfigStatus } = require('./utils/sendEmail');
 
 console.log('SERVER STARTED FROM:', __dirname);
 console.log('ROUTES FOLDER:', require('fs').readdirSync(__dirname + '/routes'));
-
-// Use .env as source of truth for local dev (Windows/shell may already set MONGO_URI).
-dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
 const app = express();
 
@@ -25,7 +23,7 @@ const corsOrigins = [
 const corsOptions = {
   origin: [...new Set(corsOrigins)],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
@@ -62,6 +60,9 @@ app.use('/api/assets', require('./routes/assetRoutes'));
 
 // Reports routes
 app.use('/api/reports', require('./routes/reportRoutes'));
+
+// Notification routes
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // Upload routes
 app.use('/api/upload', require('./routes/uploadRoutes'));

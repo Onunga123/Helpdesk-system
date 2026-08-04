@@ -1,14 +1,22 @@
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const Ticket = require('../models/ticketModel');
+const User = require('../models/userModel');
 const { generateTicketNumber } = require('../utils/generateTicketNumber');
 const {
   notifyTicketCreated,
   notifyTicketStatusUpdated,
   notifyTicketAssigned,
   notifyCommentParticipants,
+  notifyStaffNewTicket,
+  notifyStaffTicketResolved,
   queueNotification,
 } = require('../utils/notificationService');
+const {
+  createNotification,
+  broadcastNotification,
+  getAdminAndOfficerIds,
+} = require('../services/notificationService');
 
 const createTicket = asyncHandler(async (req, res) => {
   const { title, description, category, priority } = req.body;
@@ -28,7 +36,34 @@ const createTicket = asyncHandler(async (req, res) => {
     createdBy: req.user._id,
   });
 
-  queueNotification(() => notifyTicketCreated(ticket, req.user));
+  console.log('[Ticket] Created:', ticket.ticketNumber);
+
+  queueNotification(async () => {
+    // In-app: submitter
+    await createNotification(
+      req.user._id,
+      'ticket_created',
+      'Your ticket has been created',
+      `Ticket ${ticket.ticketNumber} has been successfully created.`,
+      ticket._id
+    );
+
+    // In-app: all admins & ICT officers
+    const staffIds = await getAdminAndOfficerIds(req.user._id);
+    await broadcastNotification(
+      staffIds,
+      'ticket_created',
+      'New Ticket Submitted',
+      `${ticket.ticketNumber} - ${ticket.title}`,
+      ticket._id
+    );
+
+    // Email: submitter
+    await notifyTicketCreated(ticket, req.user);
+
+    // Email: all admins & ICT officers
+    await notifyStaffNewTicket(ticket, req.user);
+  });
 
   res.status(201).json({ success: true, data: ticket });
 });
@@ -133,15 +168,43 @@ const updateTicket = asyncHandler(async (req, res) => {
   const updated = await ticket.save();
 
   const statusChanged = oldStatus !== updated.status;
+  const becameResolved = statusChanged && updated.status === 'Resolved';
   const newAssignedTo = updated.assignedTo ? updated.assignedTo.toString() : null;
   const assignedChanged = oldAssignedTo !== newAssignedTo;
 
   queueNotification(async () => {
-    const User = require('../models/userModel');
-
     if (statusChanged) {
       const owner = await User.findById(updated.createdBy);
       if (owner) {
+        if (becameResolved) {
+          await createNotification(
+            owner._id,
+            'resolved',
+            'Your ticket has been resolved',
+            `Ticket ${updated.ticketNumber} has been resolved.`,
+            updated._id
+          );
+
+          const staffIds = await getAdminAndOfficerIds();
+          await broadcastNotification(
+            staffIds,
+            'resolved',
+            'Ticket Resolved',
+            `${updated.ticketNumber} - ${updated.title}`,
+            updated._id
+          );
+
+          await notifyStaffTicketResolved(updated, owner);
+        } else {
+          await createNotification(
+            owner._id,
+            'status_updated',
+            'Ticket Status Updated',
+            `Ticket ${updated.ticketNumber} is now "${updated.status}".`,
+            updated._id
+          );
+        }
+
         await notifyTicketStatusUpdated(updated, owner, {
           updatedBy: req.user,
           resolutionNote: req.body.resolutionNote,
@@ -152,7 +215,16 @@ const updateTicket = asyncHandler(async (req, res) => {
     if (assignedChanged && updated.assignedTo) {
       const officer = await User.findById(updated.assignedTo);
       const owner = await User.findById(updated.createdBy);
-      if (officer && owner) await notifyTicketAssigned(updated, officer, owner);
+      if (officer) {
+        await createNotification(
+          officer._id,
+          'assigned',
+          'Ticket Assigned',
+          `Ticket ${updated.ticketNumber} has been assigned to you.`,
+          updated._id
+        );
+        if (owner) await notifyTicketAssigned(updated, officer, owner);
+      }
     }
   });
 
@@ -173,7 +245,24 @@ const addComment = asyncHandler(async (req, res) => {
   ticket.comments.push({ user: req.user._id, message: req.body.message });
   await ticket.save();
 
-  queueNotification(() => notifyCommentParticipants(ticket, req.body.message, req.user));
+  queueNotification(async () => {
+    const recipientIds = new Set();
+    if (ticket.createdBy) recipientIds.add(ticket.createdBy.toString());
+    if (ticket.assignedTo) recipientIds.add(ticket.assignedTo.toString());
+    recipientIds.delete(req.user._id.toString());
+
+    await notifyCommentParticipants(ticket, req.body.message, req.user);
+
+    for (const userId of recipientIds) {
+      await createNotification(
+        userId,
+        'commented',
+        'New Ticket Comment',
+        `${req.user.name} commented on ticket ${ticket.ticketNumber}.`,
+        ticket._id
+      );
+    }
+  });
 
   res.json({ success: true, data: ticket });
 });

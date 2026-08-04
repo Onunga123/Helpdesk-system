@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiBell } from 'react-icons/fi';
+import { FiBell, FiTrash2 } from 'react-icons/fi';
 import API from '../../api/axios';
+
+const isUnread = (n) => !(n.isRead ?? n.read);
+const getLink = (n) => n.link || (n.relatedId ? `/tickets/${n.relatedId}` : '');
 
 const NotificationBell = () => {
   const [open, setOpen] = useState(false);
@@ -15,7 +18,7 @@ const NotificationBell = () => {
       setLoading(true);
       const { data } = await API.get('/notifications');
       setNotifications(data?.data || []);
-      setUnreadCount(data?.unreadCount || 0);
+      setUnreadCount(data?.unreadCount ?? 0);
     } catch (err) {
       console.error('[Notifications] Failed to load:', err?.response?.data?.message || err.message);
     } finally {
@@ -57,6 +60,15 @@ const NotificationBell = () => {
     }
   };
 
+  const deleteNotification = async (id) => {
+    try {
+      await API.delete(`/notifications/${id}`);
+      fetchNotifications();
+    } catch (err) {
+      console.error('[Notifications] Delete failed:', err?.response?.data?.message || err.message);
+    }
+  };
+
   return (
     <div className="notification-bell-wrap" ref={panelRef}>
       <button
@@ -88,36 +100,43 @@ const NotificationBell = () => {
             <p className="notification-empty">No notifications yet</p>
           ) : (
             <ul className="notification-list">
-              {notifications.map((n) => (
-                <li key={n._id} className={n.read ? 'notification-item read' : 'notification-item unread'}>
-                  <div className="notification-item-body">
-                    <p className="notification-title">{n.title}</p>
-                    <p className="notification-message">{n.message}</p>
-                    <span className="notification-time">
-                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
-                    </span>
-                  </div>
-                  <div className="notification-item-actions">
-                    {n.link ? (
-                      <Link
-                        to={n.link}
-                        className="notification-view-link"
-                        onClick={() => {
-                          if (!n.read) markAsRead(n._id);
-                          setOpen(false);
-                        }}
-                      >
-                        View
-                      </Link>
-                    ) : null}
-                    {!n.read ? (
-                      <button type="button" onClick={() => markAsRead(n._id)}>
-                        Mark read
+              {notifications.map((n) => {
+                const link = getLink(n);
+                const unread = isUnread(n);
+                return (
+                  <li key={n._id} className={unread ? 'notification-item unread' : 'notification-item read'}>
+                    <div className="notification-item-body">
+                      <p className="notification-title">{n.title}</p>
+                      <p className="notification-message">{n.message}</p>
+                      <span className="notification-time">
+                        {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
+                      </span>
+                    </div>
+                    <div className="notification-item-actions">
+                      {link ? (
+                        <Link
+                          to={link}
+                          className="notification-view-link"
+                          onClick={() => {
+                            if (unread) markAsRead(n._id);
+                            setOpen(false);
+                          }}
+                        >
+                          View
+                        </Link>
+                      ) : null}
+                      {unread ? (
+                        <button type="button" onClick={() => markAsRead(n._id)}>
+                          Mark read
+                        </button>
+                      ) : null}
+                      <button type="button" aria-label="Delete notification" onClick={() => deleteNotification(n._id)}>
+                        <FiTrash2 />
                       </button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
