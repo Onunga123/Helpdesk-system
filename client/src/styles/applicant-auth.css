@@ -1,0 +1,14 @@
+﻿.applicant-auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #1a3c6e 0%, #2e5c8a 100%); padding: 20px; }
+.auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); max-width: 400px; width: 100%; }
+.auth-card h1 { color: #1a3c6e; text-align: center; margin: 0 0 5px 0; font-size: 24px; }
+.auth-card .subtitle { color: #666; text-align: center; margin: 0 0 30px 0; font-size: 14px; }
+.auth-toggle { display: flex; gap: 10px; margin-bottom: 30px; }
+.auth-toggle button { flex: 1; padding: 10px; border: 2px solid #ddd; background: white; color: #666; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+.auth-toggle button.active { background: #1a3c6e; color: white; border-color: #1a3c6e; }
+.auth-toggle button:hover { border-color: #1a3c6e; }
+.auth-card form { display: flex; flex-direction: column; gap: 15px; }
+.auth-card input, .auth-card select { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border 0.3s; }
+.auth-card input:focus, .auth-card select:focus { outline: none; border-color: #1a3c6e; }
+.auth-card .btn-submit { padding: 12px; background: #1a3c6e; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+.auth-card .btn-submit:hover:not(:disabled) { background: #0f2a4d; }
+.auth-card .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
