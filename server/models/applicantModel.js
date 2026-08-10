@@ -20,10 +20,7 @@ const applicantSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    resumePath: {
-      type: String,
-      required: true,
-    },
+    resumePath: { type: String, default: '' },
     yearsOfExperience: {
       type: Number,
       required: true,
@@ -50,3 +47,4 @@ const applicantSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Applicant", applicantSchema);
+

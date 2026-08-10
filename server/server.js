@@ -56,6 +56,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // Upload routes
 app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/recruitment/resumes', require('./routes/resumeUploadRoutes'));
 
 // Recruitment routes
 app.use('/api/recruitment/jobs', require('./routes/jobPostingRoutes'));
@@ -98,5 +99,6 @@ async function start() {
 }
 
 start();
+
 
 
