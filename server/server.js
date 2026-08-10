@@ -59,6 +59,7 @@ app.use('/api/upload', require('./routes/uploadRoutes'));
 
 // Recruitment routes
 app.use('/api/recruitment/jobs', require('./routes/jobPostingRoutes'));
+app.use('/api/recruitment/applicants', require('./routes/applicantRoutes'));
 app.use('/api/recruitment/applications', require('./routes/applicationRoutes'));
 app.use('/api/recruitment/interviews', require('./routes/interviewRoutes'));
 app.use('/api/recruitment/offers', require('./routes/offerRoutes'));
@@ -97,4 +98,5 @@ async function start() {
 }
 
 start();
+
 
