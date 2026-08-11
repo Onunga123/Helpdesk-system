@@ -64,6 +64,7 @@ app.use('/api/recruitment/applicants', require('./routes/applicantRoutes'));
 app.use('/api/recruitment/applications', require('./routes/applicationRoutes'));
 app.use('/api/recruitment/interviews', require('./routes/interviewRoutes'));
 app.use('/api/recruitment/offers', require('./routes/offerRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
 // ─── ERROR HANDLER ───────────────────────────────────────────
 app.use(errorHandler);
@@ -99,6 +100,7 @@ async function start() {
 }
 
 start();
+
 
 
 
