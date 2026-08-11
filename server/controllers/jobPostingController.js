@@ -1,5 +1,7 @@
 ﻿const asyncHandler = require("express-async-handler");
 const JobPosting = require("../models/jobPostingModel");
+const { notifyJobPosted } = require("../utils/recruitmentNotificationService");
+
 
 const createJobPosting = asyncHandler(async (req, res) => {
   const { jobTitle, department, description, requirements, salary, jobType, deadline } = req.body;
@@ -94,6 +96,12 @@ const publishJobPosting = asyncHandler(async (req, res) => {
   jobPosting.status = "Published";
   const updated = await jobPosting.save();
 
+  try {
+    await notifyJobPosted(updated.jobTitle, updated._id, "admin@tuc.ac.ke");
+  } catch (err) {
+    console.error("Notification error:", err.message);
+  }
+
   res.json({ success: true, message: "Job posting published", data: updated });
 });
 
@@ -120,3 +128,7 @@ module.exports = {
   publishJobPosting,
   closeJobPosting,
 };
+
+
+
+
