@@ -2,6 +2,21 @@
 const Offer = require("../models/offerModel");
 const Application = require("../models/applicationModel");
 
+const VALID_OFFER_STATUSES = ["Pending", "Approved", "On Hold", "Accepted", "Rejected", "Expired"];
+
+const syncApplicationForOfferStatus = async (offer, status) => {
+  if (!offer.applicationId) return;
+
+  if (status === "Accepted") {
+    await Application.findByIdAndUpdate(offer.applicationId, { status: "Selected" });
+  } else if (status === "Rejected" || status === "Expired") {
+    const application = await Application.findById(offer.applicationId);
+    if (application && application.status === "Offered") {
+      await Application.findByIdAndUpdate(offer.applicationId, { status: "Shortlisted" });
+    }
+  }
+};
+
 const createOffer = asyncHandler(async (req, res) => {
   const { applicationId, jobTitle, salaryOffered, startDate, employmentType, terms, offerLetterPath } = req.body;
 
@@ -73,9 +88,9 @@ const respondToOffer = asyncHandler(async (req, res) => {
     throw new Error("Offer not found");
   }
 
-  if (offer.status !== "Pending") {
+  if (!["Pending", "Approved"].includes(offer.status)) {
     res.status(400);
-    throw new Error("Can only respond to pending offers");
+    throw new Error("Can only respond to pending or approved offers");
   }
 
   offer.response = response;
@@ -84,9 +99,7 @@ const respondToOffer = asyncHandler(async (req, res) => {
 
   const updated = await offer.save();
 
-  if (response === "Accepted") {
-    await Application.findByIdAndUpdate(offer.applicationId, { status: "Selected" });
-  }
+  await syncApplicationForOfferStatus(offer, offer.status);
 
   res.json({ success: true, message: `Offer ${response}`, data: updated });
 });
@@ -135,9 +148,52 @@ const expireOffer = asyncHandler(async (req, res) => {
   }
 
   offer.status = "Expired";
+  offer.statusChangedAt = new Date();
+  offer.statusChangedBy = req.user._id;
   const updated = await offer.save();
 
+  await syncApplicationForOfferStatus(offer, "Expired");
+
   res.json({ success: true, message: "Offer expired", data: updated });
+});
+
+const updateOfferStatus = asyncHandler(async (req, res) => {
+  const { status, statusNote } = req.body;
+
+  if (!status || !VALID_OFFER_STATUSES.includes(status)) {
+    res.status(400);
+    throw new Error(`Invalid status. Must be one of: ${VALID_OFFER_STATUSES.join(", ")}`);
+  }
+
+  const offer = await Offer.findById(req.params.id);
+
+  if (!offer) {
+    res.status(404);
+    throw new Error("Offer not found");
+  }
+
+  offer.status = status;
+  if (statusNote !== undefined) offer.statusNote = String(statusNote).trim();
+  offer.statusChangedAt = new Date();
+  offer.statusChangedBy = req.user._id;
+
+  if (status === "Accepted") {
+    offer.response = "Accepted";
+    offer.responseDate = new Date();
+  } else if (status === "Rejected") {
+    offer.response = "Rejected";
+    offer.responseDate = new Date();
+  }
+
+  const updated = await offer.save();
+
+  await syncApplicationForOfferStatus(offer, status);
+
+  res.json({
+    success: true,
+    message: `Offer status updated to ${status}`,
+    data: updated,
+  });
 });
 
 module.exports = {
@@ -148,4 +204,5 @@ module.exports = {
   updateOffer,
   getOffersByApplicant,
   expireOffer,
+  updateOfferStatus,
 };

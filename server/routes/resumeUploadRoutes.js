@@ -1,6 +1,6 @@
 ﻿const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/authMiddleware");
+const { protectApplicantOrStaff } = require("../middleware/authMiddleware");
 const resumeUpload = require("../middleware/resumeUploadMiddleware");
 const {
   uploadResume,
@@ -8,8 +8,8 @@ const {
   downloadResume,
 } = require("../controllers/resumeUploadController");
 
-router.post("/:applicantId", protect, resumeUpload.single("resume"), uploadResume);
-router.delete("/:applicantId", protect, deleteResume);
-router.get("/:applicantId/download", protect, downloadResume);
+router.post("/:applicantId", protectApplicantOrStaff, resumeUpload.single("resume"), uploadResume);
+router.delete("/:applicantId", protectApplicantOrStaff, deleteResume);
+router.get("/:applicantId/download", protectApplicantOrStaff, downloadResume);
 
 module.exports = router;

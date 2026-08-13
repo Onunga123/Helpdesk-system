@@ -45,6 +45,10 @@ const interviewSchema = new mongoose.Schema(
     meetingLink: {
       type: String,
     },
+    cancellationReason: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

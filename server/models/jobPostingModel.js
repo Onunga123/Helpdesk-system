@@ -45,6 +45,12 @@ const jobPostingSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    screeningQuestions: [
+      {
+        question: { type: String, required: true },
+        required: { type: Boolean, default: true },
+      },
+    ],
   },
   { timestamps: true }
 );

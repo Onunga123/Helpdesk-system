@@ -85,7 +85,7 @@ const createUser = asyncHandler(async (req, res) => {
   const normalizedEmail = assertInstitutionalEmail(email, res);
 
   // Validate role before hitting the model for a clean error message
-  const validRoles = ['student', 'staff', 'ict_officer', 'admin'];
+  const validRoles = ['student', 'staff', 'ict_officer', 'hr_officer', 'admin'];
   if (role && !validRoles.includes(role)) {
     res.status(400);
     throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);

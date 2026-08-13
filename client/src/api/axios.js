@@ -14,8 +14,15 @@ API.interceptors.request.use(
       const { token } = JSON.parse(user);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        return config;
       }
     }
+
+    const applicantToken = localStorage.getItem('applicantToken');
+    if (applicantToken) {
+      config.headers.Authorization = `Bearer ${applicantToken}`;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -26,10 +33,20 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isAuthLoginRequest = (error.config?.url || "").includes("/auth/login");
-    if (error.response?.status === 401 && !isAuthLoginRequest) {
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    const requestUrl = error.config?.url || "";
+    const isAuthLoginRequest = requestUrl.includes("/auth/login");
+    const isApplicantLoginRequest = requestUrl.includes("/recruitment/applicants/login");
+    const isApplicantSession = Boolean(localStorage.getItem("applicantToken"));
+
+    if (error.response?.status === 401 && !isAuthLoginRequest && !isApplicantLoginRequest) {
+      if (isApplicantSession) {
+        localStorage.removeItem("applicantToken");
+        localStorage.removeItem("applicantId");
+        window.location.href = "/recruitment/auth";
+      } else {
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

@@ -44,6 +44,7 @@ const roleClassMap = {
   admin: 'badge-admin',
   ict_officer: 'badge-ict',
   staff: 'badge-staff',
+  hr_officer: 'badge-staff',
   student: 'badge-student',
 };
 
@@ -51,6 +52,7 @@ const roleLabelMap = {
   admin: 'Admin',
   ict_officer: 'ICT Officer',
   staff: 'Staff',
+  hr_officer: 'HR Officer',
   student: 'Student',
 };
 
@@ -330,6 +332,7 @@ const UserManagement = () => {
             <option value="admin">Admin</option>
             <option value="ict_officer">ICT Officer</option>
             <option value="staff">Staff</option>
+            <option value="hr_officer">HR Officer</option>
             <option value="student">Student</option>
           </select>
 
@@ -454,6 +457,7 @@ const UserManagement = () => {
                 <option value="admin">Admin</option>
                 <option value="ict_officer">ICT Officer</option>
                 <option value="staff">Staff</option>
+                <option value="hr_officer">HR Officer</option>
                 <option value="student">Student</option>
               </select>
               <input className="um-input" placeholder="Department" value={createForm.department} onChange={(e) => setCreateForm((p) => ({ ...p, department: e.target.value }))} />
@@ -522,6 +526,7 @@ const UserManagement = () => {
                 <option value="admin">Admin</option>
                 <option value="ict_officer">ICT Officer</option>
                 <option value="staff">Staff</option>
+                <option value="hr_officer">HR Officer</option>
                 <option value="student">Student</option>
               </select>
               <input className="um-input" placeholder="Department" value={editForm.department} onChange={(e) => setEditForm((p) => ({ ...p, department: e.target.value }))} />

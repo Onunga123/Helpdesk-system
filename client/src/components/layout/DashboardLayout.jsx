@@ -14,8 +14,7 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="layout">
-      {/* Sidebar */}
+    <div className={`layout ${user?.role === 'hr_officer' ? 'layout-hr' : ''}`}>
       <Sidebar
         user={user}
         onLogout={handleLogout}
@@ -23,12 +22,9 @@ const DashboardLayout = () => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main Content Area */}
       <div className="layout-main">
-        {/* Top Navbar */}
         <Navbar user={user} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
-        {/* Page Content */}
         <main className="layout-content">
           <Outlet />
         </main>
