@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import PageLoader from "./components/ui/PageLoader";
 import Login from "./pages/auth/Login";
 
+const isCareersPortal = import.meta.env.VITE_CAREERS_PORTAL === "true";
+
 const Register = lazy(() => import("./pages/auth/Register"));
 const DashboardLayout = lazy(() => import("./components/layout/DashboardLayout"));
 const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard"));
@@ -57,6 +59,15 @@ function App() {
     <Router>
       <Suspense fallback={<PageLoader label="Loading application..." />}>
         <Routes>
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to={isCareersPortal ? "/recruitment/browse" : "/dashboard"}
+                replace
+              />
+            }
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/recruitment/auth" element={<ApplicantAuth />} />
@@ -67,8 +78,7 @@ function App() {
             <Route path="profile" element={<ApplicantProfile />} />
             <Route path="apply/:jobId" element={<JobApplication />} />
           </Route>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route path="dashboard" element={<DashboardRouter />} />
             <Route path="tickets" element={<TicketList />} />
             <Route path="tickets/create" element={<CreateTicket />} />
