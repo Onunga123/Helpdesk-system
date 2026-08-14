@@ -15,6 +15,7 @@ const app = express();
 const corsOrigins = [
   'https://helpdinesk-system-smoky.vercel.app',
   'https://helpdesk-system-smoky.vercel.app',
+'https://tuc-careers.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
   ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
@@ -86,3 +87,4 @@ async function start() {
 }
 
 start();
+
