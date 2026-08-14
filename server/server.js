@@ -1,4 +1,4 @@
-﻿require('./config/loadEnv')();
+require('./config/loadEnv')();
 
 const express = require('express');
 const cors = require('cors');
@@ -10,11 +10,26 @@ const { logEmailConfigStatus, verifyEmailTransport } = require('./utils/sendEmai
 
 const app = express();
 
-// ─── MIDDLEWARE ──────────────────────────────────────────────
+// --- MIDDLEWARE ----------------------------------------------
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cors());
+const allowedOrigins = [
+  'https://tuc-careers.vercel.app',
+  'https://helpdesk-system-smoky.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+];
+
+const corsOptions = {
+  origin: [...new Set(allowedOrigins)],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'), {
@@ -24,7 +39,7 @@ app.use(
   })
 );
 
-// ─── ROUTES ──────────────────────────────────────────────────
+// --- ROUTES --------------------------------------------------
 app.get('/', (req, res) => {
   res.json({
     message: 'TUC ICT Help Desk API is running...',
@@ -66,10 +81,10 @@ app.use('/api/recruitment/interviews', require('./routes/interviewRoutes'));
 app.use('/api/recruitment/offers', require('./routes/offerRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
-// ─── ERROR HANDLER ───────────────────────────────────────────
+// --- ERROR HANDLER -------------------------------------------
 app.use(errorHandler);
 
-// ─── START SERVER ────────────────────────────────────────────
+// --- START SERVER --------------------------------------------
 const PORT = process.env.PORT || 5000;
 
 async function start() {
@@ -100,7 +115,3 @@ async function start() {
 }
 
 start();
-
-
-
-
