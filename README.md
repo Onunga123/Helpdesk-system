@@ -1,4 +1,4 @@
----
+
 
 ## Development Progress
 
@@ -20,8 +20,6 @@
 | Backend Deployment | ✅ Live | Render (https://tuc-helpdesk-api.onrender.com) |
 | HR Recruitment Portal | ⏳ Pending | Phase 2 feature |
 
----
-
 ## Getting Started
 
 ### Prerequisites
@@ -37,19 +35,16 @@
 git clone https://github.com/Onunga123/Helpdesk-system.git
 cd Helpdesk-system
 ```
-
 2. **Install server dependencies**
 ```bash
 cd server
 npm install
 ```
-
 3. **Install client dependencies**
 ```bash
 cd ../client
 npm install
 ```
-
 4. **Configure environment variables**
 
 Create `server/.env`:
@@ -65,18 +60,15 @@ EMAIL_FROM_NAME=TUC ICT Help Desk
 EMAIL_FROM_ADDRESS=your_verified_sender_email@gmail.com
 CLIENT_URL=http://localhost:3000
 ```
-
 Create `client/.env`:
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
-
 5. **Run the server**
 ```bash
 cd server
 npm run dev
 ```
-
 Server runs on **http://localhost:5000**
 
 6. **Run the client** (in a new terminal)
@@ -84,21 +76,9 @@ Server runs on **http://localhost:5000**
 cd client
 npm run dev
 ```
-
 Client runs on **http://localhost:5173**
 
----
-
 ## Testing Credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@tuc.ac.ke | admin123 |
-| ICT Officer | ict@tuc.ac.ke | ict123 |
-| Student | student@tuc.ac.ke | student123 |
-| Staff | staff@tuc.ac.ke | staff123 |
-
----
 
 ## Email Notifications (Brevo Integration)
 
@@ -122,8 +102,6 @@ All emails use beautiful branded HTML templates with:
 - Action buttons
 - Professional footer
 
----
-
 ## In-App Notifications
 
 ### Features
@@ -141,9 +119,6 @@ All emails use beautiful branded HTML templates with:
 - `assigned` — Ticket assigned to officer
 - `commented` — New comment on ticket
 - `resolved` — Ticket marked as resolved
-
----
-
 ## Deployment
 
 ### Backend (Render)
@@ -158,22 +133,11 @@ All emails use beautiful branded HTML templates with:
 3. Environment variables set in Vercel project settings
 4. Instant deployment, global CDN
 
----
-
 ## Compliance
 
 - ✅ Kenyan Data Protection Act (2019)
 - ✅ Public Service recruitment standards
 - ✅ University institutional data governance policies
-
----
-
-## Known Issues
-
-- Render free tier spins down after inactivity (50+ second delay on first request)
-- Email notifications require Brevo account with verified sender
-
----
 
 ## Future Roadmap
 
@@ -182,11 +146,8 @@ All emails use beautiful branded HTML templates with:
 - [ ] Ticket escalation workflows
 - [ ] Service Level Agreements (SLA)
 - [ ] Advanced reporting (PDF/Excel export)
-- [ ] Mobile app (React Native)
 - [ ] Chatbot support
 - [ ] Integration with Active Directory
-
----
 
 ## Institution
 
@@ -194,19 +155,13 @@ All emails use beautiful branded HTML templates with:
 Lodwar, Turkana County, Kenya  
 ICT Department
 
----
-
 ## License
 
 Private project for Turkana University College
 
----
-
 ## Support
 
 For issues or feature requests, contact: ict@tuc.ac.ke
-
----
 
 **Last Updated:** July 19, 2026  
 **Current Version:** 1.0.0  
