@@ -1,5 +1,6 @@
 ﻿const asyncHandler = require("express-async-handler");
 const Applicant = require("../models/applicantModel");
+const generateToken = require("../utils/generateToken");
 
 const createApplicant = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, phone, yearsOfExperience, educationLevel } = req.body;
@@ -25,7 +26,29 @@ const createApplicant = asyncHandler(async (req, res) => {
     resumePath: "",
   });
 
-  res.status(201).json({ success: true, data: applicant });
+  res.status(201).json({ success: true, data: applicant, applicantId: applicant._id });
+});
+
+const loginApplicant = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400);
+    throw new Error("Email is required");
+  }
+
+  const applicant = await Applicant.findOne({ email: email.toLowerCase().trim() });
+
+  if (!applicant) {
+    res.status(404);
+    throw new Error("No account found with this email. Please register first.");
+  }
+
+  res.json({
+    success: true,
+    token: generateToken(applicant._id, "applicant"),
+    applicantId: applicant._id,
+  });
 });
 
 const getApplicants = asyncHandler(async (req, res) => {
@@ -129,6 +152,7 @@ const searchApplicants = asyncHandler(async (req, res) => {
 
 module.exports = {
   createApplicant,
+  loginApplicant,
   getApplicants,
   getApplicantById,
   updateApplicant,

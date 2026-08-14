@@ -2,6 +2,8 @@
 const Interview = require("../models/interviewModel");
 const Application = require("../models/applicationModel");
 
+const VALID_RECOMMENDATIONS = ["Proceed", "Reject", "On Hold"];
+
 const scheduleInterview = asyncHandler(async (req, res) => {
   const { applicationId, interviewDate, interviewTime, location, interviewType, meetingLink } = req.body;
 
@@ -38,7 +40,13 @@ const getInterviews = asyncHandler(async (req, res) => {
   if (interviewerId) query.interviewerId = interviewerId;
 
   const interviews = await Interview.find(query)
-    .populate("applicationId")
+    .populate({
+      path: "applicationId",
+      populate: [
+        { path: "applicantId", select: "firstName lastName email" },
+        { path: "jobId", select: "jobTitle department" },
+      ],
+    })
     .populate("interviewerId", "name email")
     .sort({ interviewDate: -1 });
 
@@ -47,7 +55,13 @@ const getInterviews = asyncHandler(async (req, res) => {
 
 const getInterviewById = asyncHandler(async (req, res) => {
   const interview = await Interview.findById(req.params.id)
-    .populate("applicationId")
+    .populate({
+      path: "applicationId",
+      populate: [
+        { path: "applicantId", select: "firstName lastName email phone" },
+        { path: "jobId", select: "jobTitle department" },
+      ],
+    })
     .populate("interviewerId", "name email role");
 
   if (!interview) {
@@ -66,19 +80,75 @@ const updateInterview = asyncHandler(async (req, res) => {
     throw new Error("Interview not found");
   }
 
+  if (interview.status !== "Scheduled") {
+    res.status(400);
+    throw new Error("Only scheduled interviews can be updated");
+  }
+
   const { interviewDate, interviewTime, location, interviewType, meetingLink } = req.body;
 
   if (interviewDate) interview.interviewDate = interviewDate;
   if (interviewTime) interview.interviewTime = interviewTime;
   if (location) interview.location = location;
   if (interviewType) interview.interviewType = interviewType;
-  if (meetingLink) interview.meetingLink = meetingLink;
+  if (meetingLink !== undefined) interview.meetingLink = meetingLink;
 
   const updated = await interview.save();
   res.json({ success: true, data: updated });
 });
 
 const completeInterview = asyncHandler(async (req, res) => {
+  const { interviewNotes, recommendation } = req.body;
+
+  if (!recommendation || !VALID_RECOMMENDATIONS.includes(recommendation)) {
+    res.status(400);
+    throw new Error("A valid recommendation is required (Proceed, Reject, or On Hold)");
+  }
+
+  const interview = await Interview.findById(req.params.id);
+
+  if (!interview) {
+    res.status(404);
+    throw new Error("Interview not found");
+  }
+
+  if (interview.status !== "Scheduled") {
+    res.status(400);
+    throw new Error(`Cannot complete an interview with status "${interview.status}"`);
+  }
+
+  interview.status = "Completed";
+  interview.interviewNotes = interviewNotes?.trim() || "";
+  interview.recommendation = recommendation;
+
+  const updated = await interview.save();
+  res.json({ success: true, message: "Interview marked as completed", data: updated });
+});
+
+const cancelInterview = asyncHandler(async (req, res) => {
+  const { cancellationReason } = req.body;
+
+  const interview = await Interview.findById(req.params.id);
+
+  if (!interview) {
+    res.status(404);
+    throw new Error("Interview not found");
+  }
+
+  if (interview.status !== "Scheduled") {
+    res.status(400);
+    throw new Error(`Cannot cancel an interview with status "${interview.status}"`);
+  }
+
+  interview.status = "Cancelled";
+  interview.cancellationReason = cancellationReason?.trim() || "";
+
+  const updated = await interview.save();
+
+  res.json({ success: true, message: "Interview cancelled", data: updated });
+});
+
+const updateInterviewOutcome = asyncHandler(async (req, res) => {
   const { interviewNotes, recommendation } = req.body;
 
   const interview = await Interview.findById(req.params.id);
@@ -88,26 +158,25 @@ const completeInterview = asyncHandler(async (req, res) => {
     throw new Error("Interview not found");
   }
 
-  interview.status = "Completed";
-  if (interviewNotes) interview.interviewNotes = interviewNotes;
-  if (recommendation) interview.recommendation = recommendation;
-
-  const updated = await interview.save();
-  res.json({ success: true, data: updated });
-});
-
-const cancelInterview = asyncHandler(async (req, res) => {
-  const interview = await Interview.findById(req.params.id);
-
-  if (!interview) {
-    res.status(404);
-    throw new Error("Interview not found");
+  if (interview.status !== "Completed") {
+    res.status(400);
+    throw new Error("Only completed interviews can have their outcome updated");
   }
 
-  interview.status = "Cancelled";
-  const updated = await interview.save();
+  if (recommendation !== undefined) {
+    if (!VALID_RECOMMENDATIONS.includes(recommendation)) {
+      res.status(400);
+      throw new Error("Invalid recommendation. Use Proceed, Reject, or On Hold");
+    }
+    interview.recommendation = recommendation;
+  }
 
-  res.json({ success: true, message: "Interview cancelled", data: updated });
+  if (interviewNotes !== undefined) {
+    interview.interviewNotes = interviewNotes.trim();
+  }
+
+  const updated = await interview.save();
+  res.json({ success: true, message: "Interview outcome updated", data: updated });
 });
 
 const getInterviewsByApplicant = asyncHandler(async (req, res) => {
@@ -127,5 +196,6 @@ module.exports = {
   updateInterview,
   completeInterview,
   cancelInterview,
+  updateInterviewOutcome,
   getInterviewsByApplicant,
 };

@@ -8,6 +8,7 @@ const {
   updateInterview,
   completeInterview,
   cancelInterview,
+  updateInterviewOutcome,
   getInterviewsByApplicant,
 } = require("../controllers/interviewController");
 
@@ -17,6 +18,7 @@ router.get("/:id", protect, authorize("admin", "hr_officer"), getInterviewById);
 router.put("/:id", protect, authorize("admin", "hr_officer"), updateInterview);
 router.put("/:id/complete", protect, authorize("admin", "hr_officer"), completeInterview);
 router.put("/:id/cancel", protect, authorize("admin", "hr_officer"), cancelInterview);
+router.put("/:id/outcome", protect, authorize("admin", "hr_officer"), updateInterviewOutcome);
 router.get("/applicant/:applicationId", protect, authorize("admin", "hr_officer"), getInterviewsByApplicant);
 
 module.exports = router;

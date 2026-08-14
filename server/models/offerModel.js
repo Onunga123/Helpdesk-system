@@ -29,8 +29,19 @@ const offerSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Pending", "Accepted", "Rejected", "Expired"],
+      enum: ["Pending", "Approved", "On Hold", "Accepted", "Rejected", "Expired"],
       default: "Pending",
+    },
+    statusNote: {
+      type: String,
+      default: "",
+    },
+    statusChangedAt: {
+      type: Date,
+    },
+    statusChangedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     offerLetterPath: {
       type: String,

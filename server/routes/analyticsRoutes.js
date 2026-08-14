@@ -8,6 +8,9 @@ const {
   getInterviewMetrics,
   getOfferAnalytics,
   getApplicantDemographics,
+  getRecruitmentTrends,
+  getRecruitmentInsights,
+  getAnalyticsFilterOptions,
 } = require("../controllers/reportsController");
 
 router.get("/dashboard", protect, authorize("admin", "hr_officer"), getRecruitmentDashboard);
@@ -16,5 +19,8 @@ router.get("/applications", protect, authorize("admin", "hr_officer"), getApplic
 router.get("/interviews", protect, authorize("admin", "hr_officer"), getInterviewMetrics);
 router.get("/offers", protect, authorize("admin", "hr_officer"), getOfferAnalytics);
 router.get("/demographics", protect, authorize("admin", "hr_officer"), getApplicantDemographics);
+router.get("/trends", protect, authorize("admin", "hr_officer"), getRecruitmentTrends);
+router.get("/insights", protect, authorize("admin", "hr_officer"), getRecruitmentInsights);
+router.get("/filters", protect, authorize("admin", "hr_officer"), getAnalyticsFilterOptions);
 
 module.exports = router;

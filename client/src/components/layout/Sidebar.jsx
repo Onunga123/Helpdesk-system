@@ -1,96 +1,94 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+﻿import React from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
-  FaTachometerAlt, FaTicketAlt, FaBook, FaLaptop,
-  FaChartBar, FaUsers, FaSignOutAlt, FaTimes, FaUserCog,
+  FaTachometerAlt,
+  FaTicketAlt,
+  FaBook,
+  FaLaptop,
+  FaChartBar,
+  FaUsers,
+  FaSignOutAlt,
+  FaTimes,
+  FaUserCog,
+  FaArrowLeft,
 } from 'react-icons/fa';
+import { HR_NAV_ITEMS } from './hrNavItems';
 import './Layout.css';
 
+const HELP_DESK_ITEMS = [
+  { path: '/dashboard', icon: <FaTachometerAlt />, label: 'Dashboard' },
+  { path: '/tickets', icon: <FaTicketAlt />, label: 'Tickets' },
+  { path: '/knowledge', icon: <FaBook />, label: 'Knowledge Base' },
+  { path: '/assets', icon: <FaLaptop />, label: 'Assets', roles: ['admin', 'ict_officer'] },
+  { path: '/reports', icon: <FaChartBar />, label: 'Reports', roles: ['admin', 'ict_officer'] },
+  { path: '/admin/users', icon: <FaUsers />, label: 'User Management', roles: ['admin'] },
+];
+
+const ACCOUNT_ITEM = {
+  path: '/account-settings',
+  icon: <FaUserCog />,
+  label: 'Account Settings',
+};
+
+const filterByRole = (items, role) =>
+  items.filter((item) => !item.roles || item.roles.includes(role));
+
 const Sidebar = ({ isOpen, onClose, onLogout, user }) => {
-  const handleLogout = () => {
-    onLogout();
-  };
+  const location = useLocation();
+  const role = user?.role || 'student';
+  const isHrOfficer = role === 'hr_officer';
+  const isAdmin = role === 'admin';
+  const onHrPortal = location.pathname.startsWith('/hr-portal');
 
-  // Navigation items based on role
-  const navItems = [
-    {
-      path: '/dashboard',
-      icon: <FaTachometerAlt />,
-      label: 'Dashboard',
-      roles: ['admin', 'ict_officer', 'staff', 'student'],
-    },
-    {
-      path: '/tickets',
-      icon: <FaTicketAlt />,
-      label: 'Tickets',
-      roles: ['admin', 'ict_officer', 'staff', 'student'],
-    },
-    {
-      path: '/knowledge',
-      icon: <FaBook />,
-      label: 'Knowledge Base',
-      roles: ['admin', 'ict_officer', 'staff', 'student'],
-    },
-    {
-      path: '/assets',
-      icon: <FaLaptop />,
-      label: 'Assets',
-      roles: ['admin', 'ict_officer'],
-    },
-    {
-      path: '/reports',
-      icon: <FaChartBar />,
-      label: 'Reports',
-      roles: ['admin', 'ict_officer'],
-    },
-    {
-      path: '/admin/users',
-      icon: <FaUsers />,
-      label: 'User Management',
-      roles: ['admin'],
-    },
-    {
-      path: '/account-settings',
-      icon: <FaUserCog />,
-      label: 'Account Settings',
-      roles: ['admin', 'ict_officer', 'staff', 'student'],
-    },
-  ];
+  const helpDeskItems = filterByRole(HELP_DESK_ITEMS, role).filter((item) => {
+    if (role === 'staff' || role === 'student') {
+      return !['/assets', '/reports', '/admin/users'].includes(item.path);
+    }
+    return true;
+  });
 
-  // Filter nav items by user role
-  const filteredNav = navItems.filter((item) =>
-    item.roles.includes(user?.role)
-  );
+  const sections = [];
 
-  const roleLabel = {
-    admin: 'Administrator',
-    ict_officer: 'ICT Officer',
-    staff: 'Staff',
-    student: 'Student',
-  };
+  if (isHrOfficer) {
+    sections.push({ label: 'RECRUITMENT', items: HR_NAV_ITEMS });
+    sections.push({ label: null, items: [ACCOUNT_ITEM] });
+  } else if (isAdmin) {
+    sections.push({ label: 'MAIN MENU', items: helpDeskItems });
+    sections.push({ label: 'RECRUITMENT', items: HR_NAV_ITEMS });
+    sections.push({ label: null, items: [ACCOUNT_ITEM] });
+  } else if (role === 'ict_officer') {
+    sections.push({ label: 'MAIN MENU', items: helpDeskItems });
+    sections.push({ label: null, items: [ACCOUNT_ITEM] });
+  } else {
+    sections.push({ label: 'MAIN MENU', items: helpDeskItems });
+    sections.push({ label: null, items: [ACCOUNT_ITEM] });
+  }
 
   return (
     <>
-      {/* Overlay for mobile */}
       {isOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={onClose}
-          aria-hidden="true"
-        />
+        <div className="sidebar-overlay" onClick={onClose} aria-hidden="true" />
       )}
 
       <aside
         id="app-sidebar"
-        className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}
+        className={`sidebar ${isOpen ? 'sidebar-open' : ''} ${isHrOfficer ? 'sidebar-hr' : ''}`}
         aria-label="Primary navigation"
       >
-        {/* Logo */}
         <div className="sidebar-logo">
-          <span className="sidebar-logo-icon">🎓</span>
+          <span className="sidebar-logo-icon">{isHrOfficer ? '📋' : '🎓'}</span>
           <div>
-            <h2>TUC HelpDesk</h2>
-            <p>ICT Support System</p>
+            {isHrOfficer ? (
+              <>
+                <h2>TUC Recruitment</h2>
+                <p>Turkana University College</p>
+              </>
+            ) : (
+              <>
+                <h2>TUC HelpDesk</h2>
+                <p>ICT Support System</p>
+              </>
+            )}
           </div>
           <button
             type="button"
@@ -102,40 +100,41 @@ const Sidebar = ({ isOpen, onClose, onLogout, user }) => {
           </button>
         </div>
 
-        {/* User Info */}
-        <div className="sidebar-user">
-          <div className="sidebar-avatar">
-            {user?.name?.charAt(0).toUpperCase()}
-          </div>
-          <div className="sidebar-user-info">
-            <p className="sidebar-user-name">{user?.name}</p>
-            <span className="sidebar-user-role">
-              {roleLabel[user?.role]}
-            </span>
-          </div>
-        </div>
+        {sections.map((section) => (
+          <nav key={section.label || 'account'} className="sidebar-nav">
+            {section.label && <p className="sidebar-nav-label">{section.label}</p>}
+            {section.items.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`
+                }
+                onClick={onClose}
+              >
+                <span className="sidebar-link-icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        ))}
 
-        {/* Navigation */}
-        <nav className="sidebar-nav">
-          <p className="sidebar-nav-label">MAIN MENU</p>
-          {filteredNav.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`
-              }
-              onClick={onClose}
-            >
-              <span className="sidebar-link-icon">{item.icon}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Logout */}
         <div className="sidebar-footer">
-          <button type="button" className="sidebar-logout" onClick={handleLogout}>
+          {isHrOfficer && (
+            <div className="sidebar-hr-contact">
+              <p>HR Support</p>
+              <a href="mailto:hr@tuc.ac.ke">hr@tuc.ac.ke</a>
+            </div>
+          )}
+
+          {isAdmin && onHrPortal && (
+            <Link to="/dashboard" className="sidebar-back-link" onClick={onClose}>
+              <FaArrowLeft aria-hidden="true" />
+              <span>Back to Help Desk</span>
+            </Link>
+          )}
+
+          <button type="button" className="sidebar-logout" onClick={onLogout}>
             <FaSignOutAlt />
             <span>Sign Out</span>
           </button>

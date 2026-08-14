@@ -5,3 +5,6 @@ build/
 npm-debug.log
 server/uploads/
 uploads/
+.env.production
+.env.local
+.env*.local
