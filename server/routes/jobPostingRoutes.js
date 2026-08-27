@@ -18,8 +18,17 @@ router.get("/stats", protect, authorize("admin", "hr_officer"), getJobPostingSta
 router.get("/", getJobPostings);
 router.get("/:id", getJobPostingById);
 router.put("/:id", protect, authorize("admin", "hr_officer"), updateJobPosting);
-router.delete("/:id", protect, authorize("admin"), deleteJobPosting);
-router.put("/:id/publish", protect, authorize("admin", "hr_officer"), publishJobPosting);
+router.delete("/:id", protect, authorize("admin", "hr_officer"), deleteJobPosting);
+router.put(
+  "/:id/publish",
+  (req, res, next) => {
+    console.log("[JobPosting] PUT /api/recruitment/jobs/:id/publish", req.params.id);
+    next();
+  },
+  protect,
+  authorize("admin", "hr_officer"),
+  publishJobPosting
+);
 router.put("/:id/close", protect, authorize("admin", "hr_officer"), closeJobPosting);
 router.put("/:id/reopen", protect, authorize("admin", "hr_officer"), reopenJobPosting);
 

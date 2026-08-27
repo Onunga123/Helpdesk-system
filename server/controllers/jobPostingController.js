@@ -1,6 +1,7 @@
 ﻿const asyncHandler = require("express-async-handler");
 const JobPosting = require("../models/jobPostingModel");
 const { notifyJobPosted } = require("../utils/recruitmentNotificationService");
+const { notifySMSJobPosted } = require("../utils/smsNotificationService");
 const { enrichJobPostingsWithMetrics } = require("../utils/jobPostingMetrics");
 
 const buildJobQuery = (queryParams) => {
@@ -142,11 +143,18 @@ const deleteJobPosting = asyncHandler(async (req, res) => {
     throw new Error("Job posting not found");
   }
 
+  if (jobPosting.status !== "Draft") {
+    res.status(400);
+    throw new Error("Only draft job postings can be deleted");
+  }
+
   await JobPosting.deleteOne({ _id: req.params.id });
   res.json({ success: true, message: "Job posting deleted" });
 });
 
 const publishJobPosting = asyncHandler(async (req, res) => {
+  console.log("[JobPosting] publishJobPosting called for id:", req.params.id);
+
   const jobPosting = await JobPosting.findById(req.params.id);
 
   if (!jobPosting) {
@@ -154,14 +162,33 @@ const publishJobPosting = asyncHandler(async (req, res) => {
     throw new Error("Job posting not found");
   }
 
+  if (jobPosting.status === "Published") {
+    res.status(400);
+    throw new Error("Job is already published");
+  }
+
+  if (jobPosting.status === "Closed") {
+    res.status(400);
+    throw new Error("Closed job postings must be reopened before publishing");
+  }
+
   jobPosting.status = "Published";
   const updated = await jobPosting.save();
 
-  try {
-    await notifyJobPosted(updated.jobTitle, updated._id, "admin@tuc.ac.ke");
-  } catch (err) {
-    console.error("Notification error:", err.message);
-  }
+  console.log("[JobPosting] Job published:", updated.jobTitle);
+
+  const applicationsLink = `${process.env.CLIENT_URL || "http://localhost:5173"}/recruitment/browse`;
+  const hrPhone = process.env.HR_SMS_PHONE;
+
+  notifyJobPosted(updated.jobTitle, updated._id, "admin@tuc.ac.ke").catch((err) => {
+    console.error("Email notification error:", err);
+  });
+
+  console.log("[JobPosting] About to send job posted SMS to:", hrPhone || "(not configured)");
+
+  notifySMSJobPosted(updated.jobTitle, applicationsLink, hrPhone).catch((err) => {
+    console.error("SMS notification error:", err);
+  });
 
   res.json({ success: true, message: "Job posting published", data: updated });
 });
