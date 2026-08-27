@@ -935,6 +935,17 @@ table select {
   border-color: #14325a;
 }
 
+.job-card-btn-danger {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.job-card-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
 .job-card-actions .rec-action-menu-wrap {
   margin-left: auto;
 }

@@ -287,8 +287,7 @@ const JobPostingsList = () => {
     return "";
   };
 
-  const onCreateJob = async (e) => {
-    e.preventDefault();
+  const onCreateJob = async (publishAfterSave = false) => {
     const validationError = validateForm(createForm);
     if (validationError) {
       setCreateError(validationError);
@@ -298,8 +297,16 @@ const JobPostingsList = () => {
     setSubmitting(true);
     setCreateError("");
     try {
-      await axios.post("/recruitment/jobs", buildJobPayload(createForm));
-      toast.success("Job posting saved as draft");
+      const response = await axios.post("/recruitment/jobs", buildJobPayload(createForm));
+      const jobId = response.data.data._id;
+
+      if (publishAfterSave) {
+        await axios.put(`/recruitment/jobs/${jobId}/publish`);
+        toast.success("Job published successfully");
+      } else {
+        toast.success("Job posting saved as draft");
+      }
+
       closeCreateModal();
       await refreshAll();
     } catch (err) {
@@ -309,6 +316,11 @@ const JobPostingsList = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleCreateSubmit = (e) => {
+    e.preventDefault();
+    onCreateJob(false);
   };
 
   const openEditModal = (job) => {
@@ -324,8 +336,7 @@ const JobPostingsList = () => {
     setEditError("");
   };
 
-  const onEditJob = async (e) => {
-    e.preventDefault();
+  const onEditJob = async (publishAfterSave = false) => {
     const validationError = validateForm(editForm);
     if (validationError) {
       setEditError(validationError);
@@ -336,7 +347,14 @@ const JobPostingsList = () => {
     setEditError("");
     try {
       await axios.put(`/recruitment/jobs/${editJob._id}`, buildJobPayload(editForm));
-      toast.success("Job posting updated");
+
+      if (publishAfterSave && editJob.status === "Draft") {
+        await axios.put(`/recruitment/jobs/${editJob._id}/publish`);
+        toast.success("Job published successfully");
+      } else {
+        toast.success("Job posting updated");
+      }
+
       closeEditModal();
       await refreshAll();
     } catch (err) {
@@ -346,6 +364,11 @@ const JobPostingsList = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    onEditJob(false);
   };
 
   const runJobAction = async (jobId, action) => {
@@ -563,9 +586,68 @@ const JobPostingsList = () => {
             >
               {job.status === "Draft" ? "Preview" : "View Job"}
             </button>
-            <Link to={applicationsLink} className="job-card-btn job-card-btn-primary">
-              Applications ({metrics.applications})
-            </Link>
+
+            {job.status === "Draft" && (
+              <>
+                <button
+                  type="button"
+                  className="job-card-btn job-card-btn-secondary"
+                  onClick={() => openEditModal(job)}
+                  disabled={actionLoadingId === job._id}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="job-card-btn job-card-btn-primary"
+                  onClick={() => runJobAction(job._id, "publish")}
+                  disabled={actionLoadingId === job._id}
+                >
+                  {actionLoadingId === job._id ? "Publishing…" : "Publish"}
+                </button>
+                <button
+                  type="button"
+                  className="job-card-btn job-card-btn-danger"
+                  onClick={() => setDeleteJob(job)}
+                  disabled={actionLoadingId === job._id}
+                >
+                  Delete
+                </button>
+              </>
+            )}
+
+            {job.status === "Published" && (
+              <>
+                <Link to={applicationsLink} className="job-card-btn job-card-btn-primary">
+                  Applications ({metrics.applications})
+                </Link>
+                <button
+                  type="button"
+                  className="job-card-btn job-card-btn-secondary"
+                  onClick={() => runJobAction(job._id, "close")}
+                  disabled={actionLoadingId === job._id}
+                >
+                  Close Posting
+                </button>
+              </>
+            )}
+
+            {job.status === "Closed" && (
+              <>
+                <Link to={applicationsLink} className="job-card-btn job-card-btn-primary">
+                  Applications ({metrics.applications})
+                </Link>
+                <button
+                  type="button"
+                  className="job-card-btn job-card-btn-secondary"
+                  onClick={() => runJobAction(job._id, "reopen")}
+                  disabled={actionLoadingId === job._id}
+                >
+                  Reopen
+                </button>
+              </>
+            )}
+
             {renderActionMenu(job)}
           </div>
         </footer>
@@ -847,15 +929,28 @@ const JobPostingsList = () => {
                 <FiX />
               </button>
             </div>
-            <form className="card-body rec-form-grid" onSubmit={onCreateJob}>
+            <form className="card-body rec-form-grid" onSubmit={handleCreateSubmit}>
               <JobFormFields form={createForm} setForm={setCreateForm} idPrefix="create" />
               {createError && <p className="rec-form-error">{createError}</p>}
               <div className="um-modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={closeCreateModal} disabled={submitting}>
                   Cancel
                 </button>
-                <button type="submit" className="rec-btn-primary" disabled={submitting}>
-                  {submitting ? "Saving…" : "Save Draft"}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => onCreateJob(false)}
+                  disabled={submitting}
+                >
+                  {submitting ? "Saving…" : "Save as Draft"}
+                </button>
+                <button
+                  type="button"
+                  className="rec-btn-primary"
+                  onClick={() => onCreateJob(true)}
+                  disabled={submitting}
+                >
+                  {submitting ? "Publishing…" : "Publish Job"}
                 </button>
               </div>
             </form>
@@ -872,16 +967,26 @@ const JobPostingsList = () => {
                 <FiX />
               </button>
             </div>
-            <form className="card-body rec-form-grid" onSubmit={onEditJob}>
+            <form className="card-body rec-form-grid" onSubmit={handleEditSubmit}>
               <JobFormFields form={editForm} setForm={setEditForm} idPrefix="edit" />
               {editError && <p className="rec-form-error">{editError}</p>}
               <div className="um-modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={closeEditModal} disabled={submitting}>
                   Cancel
                 </button>
-                <button type="submit" className="rec-btn-primary" disabled={submitting}>
+                <button type="submit" className="btn btn-secondary" disabled={submitting}>
                   {submitting ? "Saving…" : "Save Changes"}
                 </button>
+                {editJob.status === "Draft" && (
+                  <button
+                    type="button"
+                    className="rec-btn-primary"
+                    onClick={() => onEditJob(true)}
+                    disabled={submitting}
+                  >
+                    {submitting ? "Publishing…" : "Save & Publish"}
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -948,10 +1053,45 @@ const JobPostingsList = () => {
                 <button type="button" className="btn btn-secondary" onClick={() => setViewJob(null)}>
                   Close
                 </button>
-                {(viewJob.status === "Draft" || viewJob.status === "Published") && (
+                {viewJob.status === "Draft" && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setViewJob(null);
+                        openEditModal(viewJob);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="rec-btn-primary"
+                      onClick={() => {
+                        runJobAction(viewJob._id, "publish");
+                        setViewJob(null);
+                      }}
+                      disabled={actionLoadingId === viewJob._id}
+                    >
+                      Publish
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-small btn-danger"
+                      onClick={() => {
+                        setViewJob(null);
+                        setDeleteJob(viewJob);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+                {viewJob.status === "Published" && (
                   <button
                     type="button"
-                    className="rec-btn-primary"
+                    className="btn btn-secondary"
                     onClick={() => {
                       setViewJob(null);
                       openEditModal(viewJob);

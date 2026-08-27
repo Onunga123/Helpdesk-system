@@ -3,6 +3,12 @@ const Application = require("../models/applicationModel");
 const Applicant = require("../models/applicantModel");
 const JobPosting = require("../models/jobPostingModel");
 const { toWebPath } = require("../utils/applicantProfileUtils");
+const { notifyApplicationSubmitted } = require("../utils/recruitmentNotificationService");
+const {
+  notifySMSApplicationSubmitted,
+  notifySMSApplicationStatusChanged,
+  normalizeKenyanPhone,
+} = require("../utils/smsNotificationService");
 
 const DEFAULT_SCREENING_QUESTIONS = [
   "Why are you interested in this role at Turkana University College?",
@@ -27,6 +33,12 @@ const buildProfileSnapshot = (applicant, profilePayload = {}) => {
 };
 
 const submitApplication = asyncHandler(async (req, res) => {
+  console.log("[Application] submitApplication called", {
+    jobId: req.body?.jobId,
+    applicantId: req.body?.applicantId,
+    hasApplicantAuth: Boolean(req.applicant),
+  });
+
   const {
     jobId,
     coverLetter,
@@ -167,6 +179,8 @@ const submitApplication = asyncHandler(async (req, res) => {
     profileSnapshot: buildProfileSnapshot(applicant, profileUpdates?.profile),
   });
 
+  console.log("[Application] Application created:", String(application._id));
+
   await JobPosting.findByIdAndUpdate(jobId, { $inc: { applicantCount: 1 } });
 
   await Applicant.findByIdAndUpdate(applicantId, {
@@ -178,6 +192,31 @@ const submitApplication = asyncHandler(async (req, res) => {
       },
     },
   });
+
+  // Send notifications (SMS must not wait on email — SMTP can block)
+  const applicantPhone =
+    applicant.phone ||
+    profileUpdates?.phone ||
+    applicant.profile?.personalDetails?.phone ||
+    application.profileSnapshot?.phone;
+
+  notifyApplicationSubmitted(
+    applicant.firstName,
+    applicant.email,
+    jobPosting.jobTitle,
+    application._id
+  ).catch((err) => {
+    console.error("[Application] Email notification error:", err.message || err);
+  });
+
+  const normalizedPhone = normalizeKenyanPhone(applicantPhone);
+  console.log("[Application] Sending application SMS", {
+    jobTitle: jobPosting.jobTitle,
+    rawPhone: applicantPhone || "MISSING",
+    normalizedPhone: normalizedPhone || "INVALID",
+  });
+
+  await notifySMSApplicationSubmitted(jobPosting.jobTitle, applicantPhone);
 
   res.status(201).json({ success: true, data: application });
 });
@@ -213,13 +252,14 @@ const getApplicationById = asyncHandler(async (req, res) => {
 
 const updateApplicationStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
-
   if (!status) {
     res.status(400);
     throw new Error("Status is required");
   }
 
-  const application = await Application.findById(req.params.id);
+  const application = await Application.findById(req.params.id)
+    .populate("applicantId", "firstName lastName email phone")
+    .populate("jobId", "jobTitle");
 
   if (!application) {
     res.status(404);
@@ -228,6 +268,12 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
 
   application.status = status;
   const updated = await application.save();
+
+  await notifySMSApplicationStatusChanged(
+    application.jobId.jobTitle,
+    status,
+    application.applicantId.phone
+  );
 
   res.json({ success: true, data: updated });
 });
