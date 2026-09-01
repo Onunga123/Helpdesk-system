@@ -11,7 +11,19 @@ const {
   getJobApplicationForm,
 } = require("../controllers/applicationController");
 
-router.post("/", protectApplicantOrStaff, submitApplication);
+router.post(
+  "/",
+  (req, res, next) => {
+    console.log("[Application] POST /api/recruitment/applications received", {
+      jobId: req.body?.jobId,
+      applicantId: req.body?.applicantId,
+      hasAuthHeader: Boolean(req.headers.authorization),
+    });
+    next();
+  },
+  protectApplicantOrStaff,
+  submitApplication
+);
 router.get("/form/job/:jobId", protectApplicantOrStaff, getJobApplicationForm);
 router.get("/", protect, authorize("admin", "hr_officer"), getApplications);
 router.get("/:id", protect, getApplicationById);

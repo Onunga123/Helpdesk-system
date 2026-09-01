@@ -24,6 +24,10 @@ const loadEnv = () => {
   const emailKeys = ['EMAIL_FROM_ADDRESS', 'BREVO_SMTP_KEY', 'EMAIL_FROM_NAME'];
   const present = emailKeys.filter((k) => Boolean(process.env[k]));
   console.log(`[Env] Email vars present: ${present.join(', ') || 'NONE'}`);
+
+  const smsKeys = ['AFRICAS_TALKING_API_KEY', 'AFRICAS_TALKING_USERNAME', 'HR_SMS_PHONE'];
+  const smsPresent = smsKeys.filter((k) => Boolean(process.env[k]));
+  console.log(`[Env] SMS vars present: ${smsPresent.join(', ') || 'NONE'}`);
 };
 
 module.exports = loadEnv;
