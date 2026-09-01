@@ -10,8 +10,7 @@ const { logEmailConfigStatus, verifyEmailTransport } = require('./utils/sendEmai
 
 const app = express();
 
-// --- MIDDLEWARE ----------------------------------------------
-app.use(compression());
+//  MIDDLEWARE 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 const allowedOrigins = [
@@ -39,7 +38,7 @@ app.use(
   })
 );
 
-// --- ROUTES --------------------------------------------------
+//  ROUTES 
 app.get('/', (req, res) => {
   res.json({
     message: 'TUC ICT Help Desk API is running...',
@@ -81,10 +80,10 @@ app.use('/api/recruitment/interviews', require('./routes/interviewRoutes'));
 app.use('/api/recruitment/offers', require('./routes/offerRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
-// --- ERROR HANDLER -------------------------------------------
+//  ERROR HANDLER 
 app.use(errorHandler);
 
-// --- START SERVER --------------------------------------------
+// START SERVER 
 const PORT = process.env.PORT || 5000;
 
 async function start() {
