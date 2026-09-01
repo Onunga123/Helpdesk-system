@@ -3,3 +3,9 @@ node_modules/
 dist/
 build/
 npm-debug.log
+server/uploads/
+uploads/
+.env.production
+.env.local
+.env*.local
+.vercel
