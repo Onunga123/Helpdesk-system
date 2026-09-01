@@ -132,7 +132,7 @@ const ArticleDetail = () => {
 
   useEffect(() => {
     fetchArticle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [id]);
 
   useEffect(() => {
@@ -259,12 +259,12 @@ const ArticleDetail = () => {
     <section aria-label="Administrator dashboard">
       <div className="kb-detail-wrap">
         <div className="kb-detail-top-actions">
-          <Link to="/knowledge" className="btn btn-secondary">
+          <Link to="/knowledge" className="btn btn-primary btn-sm">
             <FaArrowLeft /> Back to Knowledge Base
           </Link>
           <div className="kb-detail-actions-right">
             {isPrivileged && (
-              <button className="btn btn-secondary" type="button" onClick={openEditModal}>
+              <button className="btn btn-primary" type="button" onClick={openEditModal}>
                 <FaEdit /> Edit
               </button>
             )}

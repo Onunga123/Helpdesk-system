@@ -5,8 +5,6 @@ const API = axios.create({
   baseURL: `${API_URL}/api`,
 });
 
-// ─── REQUEST INTERCEPTOR ──────────────────────────────────────
-// Automatically attach JWT token to every request
 API.interceptors.request.use(
   (config) => {
     const user = localStorage.getItem('user');
@@ -28,8 +26,6 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─── RESPONSE INTERCEPTOR ────────────────────────────────────
-// Handle token expiry globally
 API.interceptors.response.use(
   (response) => response,
   (error) => {
