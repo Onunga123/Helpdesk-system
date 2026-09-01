@@ -111,7 +111,7 @@ const TicketDetail = () => {
   const [uploadError, setUploadError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
 
-  const canManageAssignment = isPrivileged; // server authorizes on PUT route too
+  const canManageAssignment = isPrivileged; 
   const canUpdateStatus = isPrivileged;
   const ticketIsClosed = ticket?.status === 'Closed';
 
@@ -144,7 +144,7 @@ const TicketDetail = () => {
 
   useEffect(() => {
     fetchTicket();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [ticketId]);
 
   useEffect(() => {
@@ -159,13 +159,13 @@ const TicketDetail = () => {
 
   useEffect(() => {
     if (!canManageAssignment) return;
-    // Backend currently restricts /api/users to admin, but we follow your spec.
+  
     const loadOfficers = async () => {
       try {
         const { data } = await API.get('/users', { params: { role: 'ict_officer' } });
         setOfficers(data?.data || []);
       } catch {
-        // If API is blocked for ict_officer, assignment dropdown will be empty (still allows UI on admin).
+
       }
     };
     loadOfficers();

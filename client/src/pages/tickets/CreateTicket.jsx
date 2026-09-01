@@ -174,7 +174,7 @@ const CreateTicket = () => {
     <section className="um-page" aria-label="Submit new ticket">
       <div className="page-header">
         <div>
-          <h1 className="um-title">Submit New Ticket</h1>
+          <h1 className="um-title">Create New Ticket</h1>
           <p className="um-subtitle">Create an ICT support request</p>
         </div>
       </div>

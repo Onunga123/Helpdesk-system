@@ -5,6 +5,7 @@ import {
   FiAlertTriangle,
   FiArrowRight,
   FiInbox,
+  FiPlus,
   FiSearch,
   FiSliders,
   FiTag,
@@ -92,7 +93,7 @@ const TicketList = () => {
 
   useEffect(() => {
     fetchTickets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [statusFilter, priorityFilter, categoryFilter]);
 
   const filteredTickets = useMemo(() => {
@@ -138,7 +139,7 @@ const TicketList = () => {
             className="btn btn-primary"
             onClick={() => (window.location.href = '/tickets/new')}
           >
-            <FiSliders /> Submit New Ticket
+            <FiPlus /> Create New Ticket
           </button>
         </div>
       </div>
