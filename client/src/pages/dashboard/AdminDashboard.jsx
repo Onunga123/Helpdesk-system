@@ -105,10 +105,7 @@ const AdminDashboard = () => {
       <header className="page-header">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, fontSize: '1.6rem', color: 'var(--text)' }}>Administrator Dashboard</h1>
-            <span className="badge badge-progress" style={{ fontSize: '0.74rem' }}>
-              Administrator
-            </span>
+            <h1 style={{ margin: 0, fontSize: '1.6rem', color: 'var(--text)' }}>Welcome to Your Dashboard</h1>    
           </div>
           <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
             Monitor tickets, users, assets and service health
@@ -121,7 +118,7 @@ const AdminDashboard = () => {
           <Link to="/tickets/create" className="btn btn-primary">
             <FaPlus /> New Ticket
           </Link>
-          <button type="button" className="btn btn-secondary" onClick={fetchStats}>
+          <button type="button" className="btn btn-primary" onClick={fetchStats}>
             <FaSyncAlt /> Refresh
           </button>
         </div>
