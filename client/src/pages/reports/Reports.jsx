@@ -17,6 +17,12 @@ import {
 import toast from 'react-hot-toast';
 
 import API from '../../api/axios';
+import {
+  buildTicketExportData,
+  exportTicketReportCsv,
+  exportTicketReportPdf,
+  filterTicketsByDateRange,
+} from './reportExport';
 
 const SECTION = {
   OVERVIEW: 'overview',
@@ -185,6 +191,9 @@ const Reports = () => {
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState('');
 
+  const [exportLoading, setExportLoading] = useState(false);
+  const [ticketReportGeneratedAt, setTicketReportGeneratedAt] = useState(null);
+
   // Supplementary fetches for richer analytics sections
   const [allAssets, setAllAssets] = useState([]);
   const [allTickets, setAllTickets] = useState([]);
@@ -215,6 +224,7 @@ const Reports = () => {
   const fetchTicketsReport = async (withValidate = false) => {
     if (withValidate && startDate && endDate && new Date(startDate) > new Date(endDate)) {
       setTicketError('Start date cannot be after end date.');
+      toast.error('Start date cannot be after end date.');
       return;
     }
     setTicketLoading(true);
@@ -227,11 +237,24 @@ const Reports = () => {
         API.get('/reports/tickets', { params }),
         API.get('/tickets'),
       ]);
-      setTicketData(reportRes?.data?.data || null);
-      setAllTickets(Array.isArray(allTicketRes?.data?.data) ? allTicketRes.data.data : []);
+      const report = reportRes?.data?.data || null;
+      const tickets = Array.isArray(allTicketRes?.data?.data) ? allTicketRes.data.data : [];
+      setTicketData(report);
+      setAllTickets(tickets);
+      setTicketReportGeneratedAt(new Date());
       setLastUpdated(new Date());
+      const total = Number(report?.summary?.total || 0);
+      if (withValidate) {
+        toast.success(
+          total
+            ? `Report generated — ${total} ticket${total === 1 ? '' : 's'} found.`
+            : 'Report generated — no tickets match the selected filters.'
+        );
+      }
     } catch (err) {
-      setTicketError(err?.response?.data?.message || 'Failed to load ticket report.');
+      const message = err?.response?.data?.message || 'Failed to load ticket report.';
+      setTicketError(message);
+      toast.error(message);
     } finally {
       setTicketLoading(false);
     }
@@ -262,10 +285,14 @@ const Reports = () => {
     setPerformanceLoading(true);
     setPerformanceError('');
     try {
-      const { data } = await API.get('/reports/performance');
-      const rows = Array.isArray(data?.data) ? data.data : [];
+      const [perfRes, ticketRes] = await Promise.all([
+        API.get('/reports/performance'),
+        API.get('/tickets'),
+      ]);
+      const rows = Array.isArray(perfRes?.data?.data) ? perfRes.data.data : [];
       const sorted = [...rows].sort((a, b) => Number(b.resolutionRate || 0) - Number(a.resolutionRate || 0));
       setPerformanceData(sorted);
+      setAllTickets(Array.isArray(ticketRes?.data?.data) ? ticketRes.data.data : []);
       setLastUpdated(new Date());
     } catch (err) {
       setPerformanceError(err?.response?.data?.message || 'Failed to load performance report.');
@@ -279,8 +306,12 @@ const Reports = () => {
     setUserLoading(true);
     setUserError('');
     try {
-      const { data } = await API.get('/reports/users');
-      setUserReport(data?.data || null);
+      const [userRes, ticketRes] = await Promise.all([
+        API.get('/reports/users'),
+        API.get('/tickets'),
+      ]);
+      setUserReport(userRes?.data?.data || null);
+      setAllTickets(Array.isArray(ticketRes?.data?.data) ? ticketRes.data.data : []);
       setLastUpdated(new Date());
     } catch (err) {
       setUserError(err?.response?.data?.message || 'Failed to load user report.');
@@ -612,7 +643,7 @@ const Reports = () => {
     const map = new Map();
     const tickets = Array.isArray(allTickets) ? allTickets : [];
     tickets.forEach((t) => {
-      const u = t.submittedBy || {};
+      const u = t.submittedBy || t.createdBy || {};
       const id = u._id || `deleted-${t._id}`;
       if (!map.has(id)) {
         map.set(id, {
@@ -680,8 +711,13 @@ const Reports = () => {
     return rows;
   }, [ticketData]);
 
+  const filteredTickets = useMemo(
+    () => filterTicketsByDateRange(allTickets, startDate, endDate),
+    [allTickets, startDate, endDate]
+  );
+
   const ticketResolutionTimes = useMemo(() => {
-    const tickets = Array.isArray(allTickets) ? allTickets : [];
+    const tickets = Array.isArray(filteredTickets) ? filteredTickets : [];
     const withTimes = tickets
       .filter((t) => (t.status === 'Resolved' || t.status === 'Closed') && t.createdAt && t.updatedAt)
       .map((t) => {
@@ -698,7 +734,81 @@ const Reports = () => {
       min: Math.min(...withTimes),
       max: Math.max(...withTimes),
     };
-  }, [allTickets]);
+  }, [filteredTickets]);
+
+  const performanceWithResolution = useMemo(() => {
+    const tickets = Array.isArray(allTickets) ? allTickets : [];
+    return performanceData.map((officer) => {
+      const officerId = String(officer._id || '');
+      const officerTickets = tickets.filter((ticket) => {
+        const assignedId = String(ticket.assignedTo?._id || ticket.assignedTo || '');
+        return (
+          assignedId === officerId &&
+          (ticket.status === 'Resolved' || ticket.status === 'Closed') &&
+          ticket.createdAt &&
+          ticket.updatedAt
+        );
+      });
+      const durations = officerTickets
+        .map((ticket) => {
+          const created = new Date(ticket.createdAt).getTime();
+          const updated = new Date(ticket.updatedAt).getTime();
+          if (Number.isNaN(created) || Number.isNaN(updated) || updated < created) return null;
+          return (updated - created) / (1000 * 60 * 60);
+        })
+        .filter((value) => value !== null);
+      const avgResolutionHours = durations.length
+        ? durations.reduce((sum, value) => sum + value, 0) / durations.length
+        : null;
+      return { ...officer, avgResolutionHours };
+    });
+  }, [performanceData, allTickets]);
+
+  const buildActiveTicketExport = () =>
+    buildTicketExportData({
+      ticketData,
+      monthlyTrendRows,
+      resolutionTimes: ticketResolutionTimes,
+      startDate,
+      endDate,
+      generatedAt: ticketReportGeneratedAt || lastUpdated || new Date(),
+    });
+
+  const handleExportPdf = () => {
+    if (!ticketData) {
+      toast.error('Generate a ticket report before exporting.');
+      return;
+    }
+    setExportLoading(true);
+    try {
+      const result = exportTicketReportPdf(buildActiveTicketExport());
+      if (result.mode === 'print') {
+        toast.success('PDF export opened — choose Save as PDF in the print dialog.');
+      } else {
+        toast.success(`Report downloaded as ${result.filename}. Open it and print to PDF.`);
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Failed to export PDF.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!ticketData) {
+      toast.error('Generate a ticket report before exporting.');
+      return;
+    }
+    setExportLoading(true);
+    try {
+      const filename = exportTicketReportCsv(buildActiveTicketExport());
+      toast.success(`Downloaded ${filename}`);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to export report.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   if (!isPrivileged) return null;
 
@@ -856,17 +966,50 @@ const Reports = () => {
         <>
           <SectionCard title="Date Range Filter">
             <div className="um-filter-grid" style={{ gridTemplateColumns: '1fr 1fr auto auto' }}>
-              <input type="date" className="um-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-              <input type="date" className="um-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-              <button className="btn btn-primary" type="button" onClick={() => fetchTicketsReport(true)}>Generate Report</button>
-              <button className="btn btn-secondary" type="button" onClick={() => { setStartDate(''); setEndDate(''); setTicketError(''); fetchTicketsReport(false); }}>Clear Filter</button>
+              <input type="date" className="um-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} aria-label="Report start date" />
+              <input type="date" className="um-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} aria-label="Report end date" />
+              <button className="btn btn-primary" type="button" onClick={() => fetchTicketsReport(true)} disabled={ticketLoading}>
+                {ticketLoading ? 'Generating...' : 'Generate Report'}
+              </button>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                  setTicketError('');
+                  fetchTicketsReport(false);
+                }}
+                disabled={ticketLoading}
+              >
+                Clear Filter
+              </button>
             </div>
             {ticketError && <p className="um-form-error" style={{ marginTop: 8 }}>{ticketError}</p>}
+            {ticketReportGeneratedAt && !ticketLoading && (
+              <p className="muted" style={{ marginTop: 8, fontSize: '0.84rem' }}>
+                Last generated: {new Date(ticketReportGeneratedAt).toLocaleString()}
+                {(startDate || endDate) && ` • Range: ${startDate || 'Beginning'} to ${endDate || 'Present'}`}
+              </p>
+            )}
           </SectionCard>
 
           {ticketLoading && <div className="spinner-wrap"><div className="spinner" /></div>}
           {!ticketLoading && ticketError && !ticketData && renderError(ticketError, () => fetchTicketsReport(false))}
-          {!ticketLoading && ticketData && (
+          {!ticketLoading && ticketData && Number(ticketData?.summary?.total || 0) === 0 && (
+            <div className="card">
+              <div className="card-body">
+                <div className="empty-state">
+                  <FiAlertCircle />
+                  <p>No tickets match the selected date range.</p>
+                  <p className="muted" style={{ fontSize: '0.88rem' }}>
+                    Adjust the filters and click Generate Report again.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {!ticketLoading && ticketData && Number(ticketData?.summary?.total || 0) > 0 && (
             <>
               <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
                 {[
@@ -944,14 +1087,23 @@ const Reports = () => {
                   ))}
                 </div>
               </SectionCard>
-
-              <SectionCard title="Export">
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button className="btn btn-primary" onClick={() => toast('Export feature coming soon')} type="button"><FiDownload /> Export as PDF</button>
-                  <button className="btn btn-secondary" onClick={() => toast('Export feature coming soon')} type="button"><FiDownload /> Export as Excel</button>
-                </div>
-              </SectionCard>
             </>
+          )}
+
+          {!ticketLoading && ticketData && (
+            <SectionCard title="Export Report">
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button className="btn btn-primary" onClick={handleExportPdf} type="button" disabled={exportLoading || ticketLoading}>
+                  <FiDownload /> {exportLoading ? 'Exporting...' : 'Export as PDF'}
+                </button>
+                <button className="btn btn-secondary" onClick={handleExportExcel} type="button" disabled={exportLoading || ticketLoading}>
+                  <FiDownload /> {exportLoading ? 'Exporting...' : 'Export as Excel'}
+                </button>
+                <span className="muted" style={{ fontSize: '0.84rem' }}>
+                  Exports the currently generated ticket report and active filters.
+                </span>
+              </div>
+            </SectionCard>
           )}
         </>
       )}
@@ -992,9 +1144,8 @@ const Reports = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {performanceData.map((r) => {
+                        {performanceWithResolution.map((r) => {
                           const rate = Number(r.resolutionRate || 0);
-                          const avg = r.totalAssigned > 0 ? (r.resolved + r.closed > 0 ? (r.totalAssigned / Math.max(r.resolved + r.closed, 1)) * 8 : 0) : 0;
                           return (
                             <tr key={r._id || r.officerEmail} className="um-row-hover">
                               <td>
@@ -1006,7 +1157,7 @@ const Reports = () => {
                               <td><span style={{ color: '#16a34a', fontWeight: 700 }}>{r.resolved}</span></td>
                               <td><span style={{ color: '#6b7280', fontWeight: 700 }}>{r.closed}</span></td>
                               <td><span style={{ color: '#d97706', fontWeight: 700 }}>{r.inProgress}</span></td>
-                              <td>{formatDuration(avg)}</td>
+                              <td>{r.avgResolutionHours == null ? '-' : formatDuration(r.avgResolutionHours)}</td>
                               <td>
                                 <div style={{ display: 'grid', gap: 6 }}>
                                   <div style={{ background: '#f1f5f9', borderRadius: 4, height: 10 }}>

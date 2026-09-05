@@ -3,12 +3,26 @@ const Ticket = require("../models/ticketModel");
 const User = require("../models/userModel");
 const Asset = require("../models/assetModel");
 
+const buildCreatedAtFilter = (startDate, endDate) => {
+  if (!startDate && !endDate) return {};
+
+  const createdAt = {};
+  if (startDate) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    createdAt.$gte = start;
+  }
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    createdAt.$lte = end;
+  }
+  return { createdAt };
+};
+
 const getTicketReport = asyncHandler(async (req, res) => {
   const { startDate, endDate } = req.query;
-  let dateFilter = {};
-  if (startDate && endDate) {
-    dateFilter = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) } };
-  }
+  const dateFilter = buildCreatedAtFilter(startDate, endDate);
   const byStatus = await Ticket.aggregate([{ $match: dateFilter }, { $group: { _id: "$status", count: { $sum: 1 } } }]);
   const byPriority = await Ticket.aggregate([{ $match: dateFilter }, { $group: { _id: "$priority", count: { $sum: 1 } } }]);
   const byCategory = await Ticket.aggregate([{ $match: dateFilter }, { $group: { _id: "$category", count: { $sum: 1 } } }]);
